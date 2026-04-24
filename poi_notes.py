@@ -195,16 +195,76 @@ class POIApp:
 
         self._update_time_display()
 
-        # ── bottom bar ────────────────────────────────────────────────────────
-        self.bar      = tk.Frame(root, relief="sunken", bd=1)
+        # ── tab bar ───────────────────────────────────────────────────────────
+        self.active_tab = "map"
+        tab_bar = tk.Frame(root, bg="#1C1C1E")
+        tab_bar.pack(fill="x", side="bottom")
+        tab_bar.columnconfigure(0, weight=1)
+        tab_bar.columnconfigure(1, weight=1)
+
+        self._tab_map_btn = tk.Button(
+            tab_bar, text="Map", font=("Helvetica", 12, "bold"),
+            bg="#1C1C1E", fg="white", activebackground="#1C1C1E",
+            relief="flat", pady=8, command=self._show_map_tab,
+        )
+        self._tab_map_btn.grid(row=0, column=0, sticky="ew")
+
+        self._tab_nbr_btn = tk.Button(
+            tab_bar, text="Neighbors", font=("Helvetica", 12),
+            bg="#1C1C1E", fg="#888888", activebackground="#1C1C1E",
+            relief="flat", pady=8, command=self._show_neighbors_tab,
+        )
+        self._tab_nbr_btn.grid(row=0, column=1, sticky="ew")
+
+        # ── map panel ─────────────────────────────────────────────────────────
+        self.map_panel = tk.Frame(root)
+        self.map_panel.pack(fill="both", expand=True)
+
+        self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1)
         self.bar.pack(fill="x", side="bottom")
         self.back_btn = tk.Button(self.bar, text="← Back to Map", command=self._go_back)
         self.add_btn  = tk.Button(self.bar, text="+ Add Marker",  command=self._add_sub_poi)
         self.info_lbl = tk.Label(self.bar, anchor="w", padx=6)
 
-        # ── canvas ────────────────────────────────────────────────────────────
-        self.canvas = tk.Canvas(root, bg="black")
+        self.canvas = tk.Canvas(self.map_panel, bg="black")
         self.canvas.pack(fill="both", expand=True)
+
+        # ── neighbors panel ───────────────────────────────────────────────────
+        self.nbr_panel = tk.Frame(root, bg="#F2F2F7")
+
+        tk.Label(
+            self.nbr_panel, text="Neighbors", bg="#F2F2F7",
+            font=("Helvetica", 20, "bold"), pady=20,
+        ).pack()
+
+        tk.Label(
+            self.nbr_panel,
+            text="Link your Instagram so neighbors can find you.",
+            bg="#F2F2F7", fg="#555555", font=("Helvetica", 11),
+        ).pack(pady=(0, 20))
+
+        insta_row = tk.Frame(self.nbr_panel, bg="#F2F2F7")
+        insta_row.pack(padx=30, fill="x")
+        tk.Label(insta_row, text="@", bg="#F2F2F7",
+                 font=("Helvetica", 16, "bold"), fg="#C13584").pack(side="left")
+        self._insta_var = tk.StringVar()
+        tk.Entry(
+            insta_row, textvariable=self._insta_var,
+            font=("Helvetica", 14), relief="flat", bg="white",
+        ).pack(side="left", fill="x", expand=True, ipady=6, padx=(4, 0))
+
+        tk.Button(
+            self.nbr_panel, text="Save",
+            bg="#C13584", fg="white", font=("Helvetica", 12, "bold"),
+            relief="flat", padx=20, pady=8,
+            command=self._save_instagram,
+        ).pack(pady=16)
+
+        self._insta_status = tk.Label(self.nbr_panel, text="", bg="#F2F2F7",
+                                      font=("Helvetica", 10), fg="#27AE60")
+        self._insta_status.pack()
+
+        self._load_instagram()
 
         self._bld_items    = {}
         self._sub_items    = {}
@@ -220,6 +280,37 @@ class POIApp:
         self.canvas.bind("<B1-Motion>",       self._motion)
         self.canvas.bind("<ButtonRelease-1>", self._release)
         self.canvas.bind("<Configure>",       self._on_configure)
+
+    def _show_map_tab(self):
+        self.active_tab = "map"
+        self._tab_map_btn.config(font=("Helvetica", 12, "bold"), fg="white")
+        self._tab_nbr_btn.config(font=("Helvetica", 12), fg="#888888")
+        self.nbr_panel.pack_forget()
+        self.map_panel.pack(fill="both", expand=True)
+
+    def _show_neighbors_tab(self):
+        self.active_tab = "neighbors"
+        self._tab_nbr_btn.config(font=("Helvetica", 12, "bold"), fg="white")
+        self._tab_map_btn.config(font=("Helvetica", 12), fg="#888888")
+        self.map_panel.pack_forget()
+        self.nbr_panel.pack(fill="both", expand=True)
+
+    def _save_instagram(self):
+        handle = self._insta_var.get().strip().lstrip("@")
+        profile = {}
+        if os.path.exists(self.data_path):
+            with open(self.data_path) as f:
+                profile = json.load(f)
+        profile["instagram"] = handle
+        with open(self.data_path, "w") as f:
+            json.dump(profile, f, indent=2)
+        self._insta_status.config(text="Saved!" if handle else "Cleared.")
+
+    def _load_instagram(self):
+        if os.path.exists(self.data_path):
+            with open(self.data_path) as f:
+                data = json.load(f)
+            self._insta_var.set(data.get("instagram", ""))
 
     def _note_key(self):
         return f"{self.sel_date.isoformat()}T{self.sel_hour:02d}"

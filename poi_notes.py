@@ -253,16 +253,36 @@ class POIApp:
         self.canvas = tk.Canvas(self.map_panel, bg="black")
         self.canvas.pack(fill="both", expand=True)
 
-        # ── neighbors panel ───────────────────────────────────────────────────
+        # ── neighbors panel (two sub-views: profile / browse) ────────────────
         self.nbr_panel = tk.Frame(root, bg="#F2F2F7")
 
-        tk.Label(
-            self.nbr_panel, text="Neighbors", bg="#F2F2F7",
-            font=("Helvetica", 22, "bold"), pady=14,
-        ).pack()
+        # top nav within neighbors
+        nbr_nav = tk.Frame(self.nbr_panel, bg="#F2F2F7")
+        nbr_nav.pack(fill="x", padx=20, pady=(14, 0))
 
-        # ── profile form ──────────────────────────────────────────────────────
-        form = tk.Frame(self.nbr_panel, bg="#F2F2F7")
+        self._nbr_view = "browse"
+
+        self._nbr_profile_btn = tk.Button(
+            nbr_nav, text="My Profile", bg="#8E44AD", fg="white",
+            command=self._show_nbr_profile, **BTN_SM)
+        self._nbr_profile_btn.pack(side="left", padx=(0, 10))
+
+        self._nbr_browse_btn = tk.Button(
+            nbr_nav, text="Browse", bg="#CCCCCC", fg="#333333",
+            command=self._show_nbr_browse, **BTN_SM)
+        self._nbr_browse_btn.pack(side="left")
+
+        # ── profile sub-view ──────────────────────────────────────────────────
+        self._profile_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
+
+        tk.Label(self._profile_view, text="My Profile", bg="#F2F2F7",
+                 font=("Helvetica", 20, "bold"), pady=12).pack()
+        tk.Label(self._profile_view,
+                 text="Your dorm is visible to neighbors.  Instagram is only revealed on a match.",
+                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11),
+                 wraplength=400).pack(pady=(0, 16))
+
+        form = tk.Frame(self._profile_view, bg="#F2F2F7")
         form.pack(padx=40, fill="x")
 
         tk.Label(form, text="Instagram", bg="#F2F2F7",
@@ -277,7 +297,7 @@ class POIApp:
                  side="left", fill="x", expand=True, ipady=10)
 
         tk.Label(form, text="Dorm / Building", bg="#F2F2F7",
-                 font=("Helvetica", 13, "bold"), anchor="w").pack(fill="x", pady=(12, 4))
+                 font=("Helvetica", 13, "bold"), anchor="w").pack(fill="x", pady=(14, 4))
         dorm_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         dorm_row.pack(fill="x")
         tk.Label(dorm_row, text="🏠", bg="white",
@@ -287,63 +307,61 @@ class POIApp:
                  font=("Helvetica", 15), relief="flat", bg="white").pack(
                  side="left", fill="x", expand=True, ipady=10)
 
-        self._insta_status = tk.Label(self.nbr_panel, text="", bg="#F2F2F7",
-                                      font=("Helvetica", 12), fg="#27AE60")
-
-        tk.Button(self.nbr_panel, text="Save Profile",
+        tk.Button(self._profile_view, text="Save Profile",
                   bg="#C13584", fg="white", command=self._save_instagram,
-                  **BTN).pack(pady=16)
+                  **BTN).pack(pady=20)
+
+        self._insta_status = tk.Label(self._profile_view, text="", bg="#F2F2F7",
+                                      font=("Helvetica", 12), fg="#27AE60")
         self._insta_status.pack()
 
-        # ── divider ───────────────────────────────────────────────────────────
-        tk.Frame(self.nbr_panel, bg="#CCCCCC", height=2).pack(fill="x", padx=30, pady=10)
+        # ── browse sub-view ───────────────────────────────────────────────────
+        self._browse_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
-        tk.Label(self.nbr_panel, text="Find Neighbors", bg="#F2F2F7",
-                 font=("Helvetica", 17, "bold")).pack(pady=(0, 6))
-        tk.Label(self.nbr_panel,
-                 text="Swipe right to match  •  identities stay hidden until both match",
-                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11)).pack(pady=(0, 10))
+        tk.Label(self._browse_view, text="Neighbors Near You", bg="#F2F2F7",
+                 font=("Helvetica", 20, "bold"), pady=12).pack()
+        tk.Label(self._browse_view,
+                 text="Your like or pass is completely private.\nInstagram only revealed when you both match.",
+                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11),
+                 justify="center").pack(pady=(0, 14))
 
-        # ── match card ────────────────────────────────────────────────────────
-        self._match_idx   = 0
-        self._match_data  = {}  # loaded from JSON: {str(idx): "liked"/"passed"/"matched"}
+        self._match_idx  = 0
+        self._match_data = {}
 
-        self._card_frame = tk.Frame(self.nbr_panel, bg="#F2F2F7")
-        self._card_frame.pack(pady=4)
-
-        self._card = tk.Frame(self._card_frame, bg="white", relief="ridge", bd=3,
-                              padx=30, pady=24)
+        # card
+        self._card = tk.Frame(self._browse_view, bg="white", relief="ridge", bd=4,
+                              padx=40, pady=28)
         self._card.pack()
 
         self._card_avatar = tk.Label(self._card, text="?", bg="#8E44AD", fg="white",
-                                     font=("Helvetica", 40, "bold"),
-                                     width=3, relief="flat")
-        self._card_avatar.pack(pady=(0, 12))
+                                     font=("Helvetica", 48, "bold"), width=3)
+        self._card_avatar.pack(pady=(0, 10))
 
         self._card_dorm = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 15, "bold"))
+                                   font=("Helvetica", 17, "bold"))
         self._card_dorm.pack()
 
-        self._card_status = tk.Label(self._card, text="Anonymous Neighbor",
-                                     bg="white", fg="#888888", font=("Helvetica", 12))
-        self._card_status.pack(pady=(4, 0))
+        self._card_insta = tk.Label(self._card, text="instagram hidden until match",
+                                    bg="white", fg="#AAAAAA", font=("Helvetica", 12, "italic"))
+        self._card_insta.pack(pady=(6, 0))
 
-        # ── swipe buttons ─────────────────────────────────────────────────────
-        swipe_row = tk.Frame(self.nbr_panel, bg="#F2F2F7")
-        swipe_row.pack(pady=16)
+        # swipe buttons
+        swipe_row = tk.Frame(self._browse_view, bg="#F2F2F7")
+        swipe_row.pack(pady=20)
 
         self._pass_btn = tk.Button(swipe_row, text="✕  Pass",
                                    bg="#E74C3C", fg="white",
                                    command=self._swipe_pass, **BTN)
-        self._pass_btn.pack(side="left", padx=16)
+        self._pass_btn.pack(side="left", padx=20)
 
         self._like_btn = tk.Button(swipe_row, text="♥  Like",
                                    bg="#27AE60", fg="white",
                                    command=self._swipe_like, **BTN)
-        self._like_btn.pack(side="left", padx=16)
+        self._like_btn.pack(side="left", padx=20)
 
         self._load_instagram()
         self._advance_card()
+        self._show_nbr_browse()
 
         self._bld_items    = {}
         self._sub_items    = {}
@@ -387,6 +405,20 @@ class POIApp:
             json.dump(profile, f, indent=2)
         self._insta_status.config(text="Profile saved!")
 
+    def _show_nbr_profile(self):
+        self._nbr_view = "profile"
+        self._browse_view.pack_forget()
+        self._profile_view.pack(fill="both", expand=True)
+        self._nbr_profile_btn.config(bg="#8E44AD", fg="white")
+        self._nbr_browse_btn.config(bg="#CCCCCC", fg="#333333")
+
+    def _show_nbr_browse(self):
+        self._nbr_view = "browse"
+        self._profile_view.pack_forget()
+        self._browse_view.pack(fill="both", expand=True)
+        self._nbr_browse_btn.config(bg="#8E44AD", fg="white")
+        self._nbr_profile_btn.config(bg="#CCCCCC", fg="#333333")
+
     def _load_instagram(self):
         if os.path.exists(self.data_path):
             with open(self.data_path) as f:
@@ -397,17 +429,15 @@ class POIApp:
 
     def _advance_card(self):
         total = len(MOCK_NEIGHBORS)
-        # find next unseen neighbor
         while self._match_idx < total:
-            key = str(self._match_idx)
-            if key not in self._match_data:
+            if str(self._match_idx) not in self._match_data:
                 break
             self._match_idx += 1
 
         if self._match_idx >= total:
             self._card_avatar.config(text="✓", bg="#27AE60")
             self._card_dorm.config(text="You've seen everyone!")
-            self._card_status.config(text="Check back later for new neighbors")
+            self._card_insta.config(text="Check back later for new neighbors", fg="#888888")
             self._pass_btn.config(state="disabled")
             self._like_btn.config(state="disabled")
             return
@@ -415,40 +445,38 @@ class POIApp:
         nb = MOCK_NEIGHBORS[self._match_idx]
         self._card_avatar.config(text="?", bg="#8E44AD")
         self._card_dorm.config(text=nb["dorm"])
-        self._card_status.config(text="Anonymous Neighbor", fg="#888888")
+        self._card_insta.config(text="instagram hidden until match", fg="#AAAAAA",
+                                font=("Helvetica", 12, "italic"))
+        self._pass_btn.config(state="normal")
+        self._like_btn.config(text="♥  Like", bg="#27AE60", command=self._swipe_like)
 
     def _swipe_pass(self):
-        key = str(self._match_idx)
-        self._match_data[key] = "passed"
+        self._match_data[str(self._match_idx)] = "passed"
         self._persist_match_data()
         self._match_idx += 1
         self._advance_card()
 
     def _swipe_like(self):
-        key = str(self._match_idx)
-        if _LIKED_YOU_BACK.get(self._match_idx, False):
-            self._match_data[key] = "matched"
+        idx = self._match_idx
+        if _LIKED_YOU_BACK.get(idx, False):
+            self._match_data[str(idx)] = "matched"
             self._persist_match_data()
-            nb = MOCK_NEIGHBORS[self._match_idx]
+            nb = MOCK_NEIGHBORS[idx]
             self._card_avatar.config(text="★", bg="#F39C12")
             self._card_dorm.config(text=nb["dorm"])
-            self._card_status.config(
-                text=f"Matched!  @{nb.get('instagram', '?')}",
-                fg="#C13584",
-            )
+            self._card_insta.config(
+                text=f"It's a match!  @{nb.get('instagram', '?')}",
+                fg="#C13584", font=("Helvetica", 14, "bold"))
             self._pass_btn.config(state="disabled")
             self._like_btn.config(text="Next  →", bg="#2980B9",
                                   command=self._next_after_match)
         else:
-            self._match_data[key] = "liked"
+            self._match_data[str(idx)] = "liked"
             self._persist_match_data()
             self._match_idx += 1
             self._advance_card()
 
     def _next_after_match(self):
-        self._pass_btn.config(state="normal")
-        self._like_btn.config(text="♥  Like", bg="#27AE60",
-                              command=self._swipe_like)
         self._match_idx += 1
         self._advance_card()
 

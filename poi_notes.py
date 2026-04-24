@@ -154,7 +154,9 @@ class POIApp:
         self.data_path  = os.path.splitext(image_path)[0] + "_poi.json"
         self.media_dir  = os.path.splitext(image_path)[0] + "_poi_media"
 
-        root.title(f"POI Notes — {os.path.basename(image_path)}")
+        root.title("meow")
+        root.geometry("900x700")
+        root.minsize(700, 550)
 
         self.orig_image  = Image.open(image_path)
         self.tk_img      = None
@@ -239,29 +241,48 @@ class POIApp:
 
         tk.Label(
             self.nbr_panel,
-            text="Link your Instagram so neighbors can find you.",
-            bg="#F2F2F7", fg="#555555", font=("Helvetica", 11),
-        ).pack(pady=(0, 20))
+            text="Set up your profile so neighbors can find you.",
+            bg="#F2F2F7", fg="#555555", font=("Helvetica", 13),
+        ).pack(pady=(0, 24))
 
-        insta_row = tk.Frame(self.nbr_panel, bg="#F2F2F7")
-        insta_row.pack(padx=30, fill="x")
-        tk.Label(insta_row, text="@", bg="#F2F2F7",
-                 font=("Helvetica", 16, "bold"), fg="#C13584").pack(side="left")
+        form = tk.Frame(self.nbr_panel, bg="#F2F2F7")
+        form.pack(padx=40, fill="x")
+
+        # Instagram field
+        tk.Label(form, text="Instagram", bg="#F2F2F7",
+                 font=("Helvetica", 11, "bold"), anchor="w").pack(fill="x", pady=(0, 4))
+        insta_row = tk.Frame(form, bg="white", relief="solid", bd=1)
+        insta_row.pack(fill="x", ipady=2)
+        tk.Label(insta_row, text="@", bg="white",
+                 font=("Helvetica", 14, "bold"), fg="#C13584", padx=8).pack(side="left")
         self._insta_var = tk.StringVar()
         tk.Entry(
             insta_row, textvariable=self._insta_var,
             font=("Helvetica", 14), relief="flat", bg="white",
-        ).pack(side="left", fill="x", expand=True, ipady=6, padx=(4, 0))
+        ).pack(side="left", fill="x", expand=True, ipady=8)
+
+        # Dorm field
+        tk.Label(form, text="Dorm / Building", bg="#F2F2F7",
+                 font=("Helvetica", 11, "bold"), anchor="w").pack(fill="x", pady=(16, 4))
+        dorm_row = tk.Frame(form, bg="white", relief="solid", bd=1)
+        dorm_row.pack(fill="x", ipady=2)
+        tk.Label(dorm_row, text="🏠", bg="white",
+                 font=("Helvetica", 14), padx=8).pack(side="left")
+        self._dorm_var = tk.StringVar()
+        tk.Entry(
+            dorm_row, textvariable=self._dorm_var,
+            font=("Helvetica", 14), relief="flat", bg="white",
+        ).pack(side="left", fill="x", expand=True, ipady=8)
 
         tk.Button(
-            self.nbr_panel, text="Save",
-            bg="#C13584", fg="white", font=("Helvetica", 12, "bold"),
-            relief="flat", padx=20, pady=8,
+            self.nbr_panel, text="Save Profile",
+            bg="#C13584", fg="white", font=("Helvetica", 13, "bold"),
+            relief="flat", padx=28, pady=10,
             command=self._save_instagram,
-        ).pack(pady=16)
+        ).pack(pady=20)
 
         self._insta_status = tk.Label(self.nbr_panel, text="", bg="#F2F2F7",
-                                      font=("Helvetica", 10), fg="#27AE60")
+                                      font=("Helvetica", 11), fg="#27AE60")
         self._insta_status.pack()
 
         self._load_instagram()
@@ -297,20 +318,23 @@ class POIApp:
 
     def _save_instagram(self):
         handle = self._insta_var.get().strip().lstrip("@")
+        dorm   = self._dorm_var.get().strip()
         profile = {}
         if os.path.exists(self.data_path):
             with open(self.data_path) as f:
                 profile = json.load(f)
         profile["instagram"] = handle
+        profile["dorm"]      = dorm
         with open(self.data_path, "w") as f:
             json.dump(profile, f, indent=2)
-        self._insta_status.config(text="Saved!" if handle else "Cleared.")
+        self._insta_status.config(text="Profile saved!")
 
     def _load_instagram(self):
         if os.path.exists(self.data_path):
             with open(self.data_path) as f:
                 data = json.load(f)
             self._insta_var.set(data.get("instagram", ""))
+            self._dorm_var.set(data.get("dorm", ""))
 
     def _note_key(self):
         return f"{self.sel_date.isoformat()}T{self.sel_hour:02d}"
@@ -408,14 +432,14 @@ class POIApp:
             int(b["rx1"] * iw), int(b["ry1"] * ih),
             int(b["rx2"] * iw), int(b["ry2"] * ih),
         ))
-        self.root.title(f"POI Notes — Building {idx + 1}")
+        self.root.title(f"meow — Building {idx + 1}")
         self._refresh()
 
     def _go_back(self):
         self.view       = "main"
         self.active_bld = None
         self.zoom_image = None
-        self.root.title(f"POI Notes — {os.path.basename(self.image_path)}")
+        self.root.title("meow")
         self._refresh()
 
     def _on_configure(self, e):

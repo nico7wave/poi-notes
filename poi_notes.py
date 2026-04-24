@@ -10,6 +10,11 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 
+BTN = dict(font=("Helvetica", 15, "bold"), relief="raised", bd=3,
+           padx=18, pady=10, cursor="hand2")
+BTN_SM = dict(font=("Helvetica", 13, "bold"), relief="raised", bd=3,
+              padx=14, pady=8, cursor="hand2")
+
 BLD_COLORS = ["#E74C3C", "#27AE60", "#2980B9", "#F39C12"]
 BLD_HANDLE = 7
 BLD_MIN    = 0.005
@@ -47,37 +52,39 @@ class MediaEditor(tk.Toplevel):
         self._photos   = {}  # tk image name -> PhotoImage (prevent GC)
         self._paths    = {}  # tk image name -> filename relative to media_dir
 
-        tk.Label(self, text=window_title, font=("Helvetica", 13, "bold"), fg=SUB_COLOR).pack(pady=(10, 0))
-        tk.Label(self, text=subtitle,     font=("Helvetica", 9),          fg="#888888").pack(pady=(2, 6))
+        tk.Label(self, text=window_title, font=("Helvetica", 15, "bold"), fg=SUB_COLOR).pack(pady=(14, 0))
+        tk.Label(self, text=subtitle,     font=("Helvetica", 10),          fg="#888888").pack(pady=(2, 8))
 
         # Title field
         title_row = tk.Frame(self)
-        title_row.pack(fill="x", padx=12, pady=(0, 6))
-        tk.Label(title_row, text="Title:", font=("Helvetica", 10, "bold"), width=6, anchor="w").pack(side="left")
+        title_row.pack(fill="x", padx=16, pady=(0, 8))
+        tk.Label(title_row, text="Title:", font=("Helvetica", 12, "bold"), width=6, anchor="w").pack(side="left")
         self._title_var = tk.StringVar(value=marker_title)
         tk.Entry(title_row, textvariable=self._title_var,
-                 font=("Helvetica", 11)).pack(side="left", fill="x", expand=True)
+                 font=("Helvetica", 13)).pack(side="left", fill="x", expand=True, ipady=4)
 
         # Toolbar
-        toolbar = tk.Frame(self, pady=2)
-        toolbar.pack(fill="x", padx=12)
-        tk.Button(toolbar, text="Insert Image", command=self._add_image).pack(side="left")
+        toolbar = tk.Frame(self, pady=4)
+        toolbar.pack(fill="x", padx=16)
+        tk.Button(toolbar, text="Insert Image", command=self._add_image,
+                  **BTN_SM).pack(side="left")
 
         # Text + scrollbar
         frm = tk.Frame(self)
-        frm.pack(fill="both", expand=True, padx=12, pady=4)
+        frm.pack(fill="both", expand=True, padx=16, pady=6)
         sb = tk.Scrollbar(frm)
         sb.pack(side="right", fill="y")
-        self.txt = tk.Text(frm, wrap="word", font=("Helvetica", 11), yscrollcommand=sb.set)
+        self.txt = tk.Text(frm, wrap="word", font=("Helvetica", 13), yscrollcommand=sb.set)
         self.txt.pack(fill="both", expand=True)
         sb.config(command=self.txt.yview)
 
         # Buttons
         row = tk.Frame(self)
-        row.pack(fill="x", padx=12, pady=(0, 10))
-        tk.Button(row, text="Cancel", width=9, command=self.destroy).pack(side="right", padx=(4, 0))
-        tk.Button(row, text="Save",   width=9, command=self._save,
-                  bg=SUB_COLOR, fg="white").pack(side="right")
+        row.pack(fill="x", padx=16, pady=(4, 14))
+        tk.Button(row, text="Cancel", command=self.destroy,
+                  **BTN_SM).pack(side="right", padx=(6, 0))
+        tk.Button(row, text="Save", command=self._save,
+                  bg=SUB_COLOR, fg="white", **BTN_SM).pack(side="right")
 
         self._load_content(content)
         self._title_var.trace_add("write", lambda *_: None)  # keep StringVar alive
@@ -175,25 +182,25 @@ class POIApp:
         self.sel_hour = now.hour
 
         # ── top bar: two centred rows (date / time) ───────────────────────────
-        top = tk.Frame(root, relief="raised", bd=1, pady=8)
+        top = tk.Frame(root, relief="raised", bd=1, pady=10)
         top.pack(fill="x", side="top")
         top.columnconfigure(1, weight=1)
 
         # Date row
-        tk.Button(top, text="◀", width=3,
-                  command=lambda: self._shift_day(-1)).grid(row=0, column=0, padx=12, pady=2)
-        self._date_lbl = tk.Label(top, font=("Helvetica", 14, "bold"), anchor="center")
+        tk.Button(top, text="◀", command=lambda: self._shift_day(-1),
+                  **BTN).grid(row=0, column=0, padx=14, pady=4)
+        self._date_lbl = tk.Label(top, font=("Helvetica", 16, "bold"), anchor="center")
         self._date_lbl.grid(row=0, column=1, sticky="ew")
-        tk.Button(top, text="▶", width=3,
-                  command=lambda: self._shift_day(1)).grid(row=0, column=2, padx=12, pady=2)
+        tk.Button(top, text="▶", command=lambda: self._shift_day(1),
+                  **BTN).grid(row=0, column=2, padx=14, pady=4)
 
         # Time row
-        tk.Button(top, text="◀", width=3,
-                  command=lambda: self._shift_hour(-1)).grid(row=1, column=0, padx=12, pady=2)
-        self._time_lbl = tk.Label(top, font=("Helvetica", 13), anchor="center")
+        tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
+                  **BTN).grid(row=1, column=0, padx=14, pady=4)
+        self._time_lbl = tk.Label(top, font=("Helvetica", 15), anchor="center")
         self._time_lbl.grid(row=1, column=1, sticky="ew")
-        tk.Button(top, text="▶", width=3,
-                  command=lambda: self._shift_hour(1)).grid(row=1, column=2, padx=12, pady=2)
+        tk.Button(top, text="▶", command=lambda: self._shift_hour(1),
+                  **BTN).grid(row=1, column=2, padx=14, pady=4)
 
         self._update_time_display()
 
@@ -205,16 +212,18 @@ class POIApp:
         tab_bar.columnconfigure(1, weight=1)
 
         self._tab_map_btn = tk.Button(
-            tab_bar, text="Map", font=("Helvetica", 12, "bold"),
-            bg="#1C1C1E", fg="white", activebackground="#1C1C1E",
-            relief="flat", pady=8, command=self._show_map_tab,
+            tab_bar, text="Map", font=("Helvetica", 15, "bold"),
+            bg="#1C1C1E", fg="white", activebackground="#2C2C2E",
+            activeforeground="white", relief="flat", pady=14,
+            cursor="hand2", command=self._show_map_tab,
         )
         self._tab_map_btn.grid(row=0, column=0, sticky="ew")
 
         self._tab_nbr_btn = tk.Button(
-            tab_bar, text="Neighbors", font=("Helvetica", 12),
-            bg="#1C1C1E", fg="#888888", activebackground="#1C1C1E",
-            relief="flat", pady=8, command=self._show_neighbors_tab,
+            tab_bar, text="Neighbors", font=("Helvetica", 15),
+            bg="#1C1C1E", fg="#888888", activebackground="#2C2C2E",
+            activeforeground="white", relief="flat", pady=14,
+            cursor="hand2", command=self._show_neighbors_tab,
         )
         self._tab_nbr_btn.grid(row=0, column=1, sticky="ew")
 
@@ -222,11 +231,13 @@ class POIApp:
         self.map_panel = tk.Frame(root)
         self.map_panel.pack(fill="both", expand=True)
 
-        self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1)
+        self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
         self.bar.pack(fill="x", side="bottom")
-        self.back_btn = tk.Button(self.bar, text="← Back to Map", command=self._go_back)
-        self.add_btn  = tk.Button(self.bar, text="+ Add Marker",  command=self._add_sub_poi)
-        self.info_lbl = tk.Label(self.bar, anchor="w", padx=6)
+        self.back_btn = tk.Button(self.bar, text="← Back to Map", command=self._go_back,
+                                  bg="#2980B9", fg="white", **BTN)
+        self.add_btn  = tk.Button(self.bar, text="+ Add Marker",  command=self._add_sub_poi,
+                                  bg="#27AE60", fg="white", **BTN)
+        self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 12))
 
         self.canvas = tk.Canvas(self.map_panel, bg="black")
         self.canvas.pack(fill="both", expand=True)
@@ -276,10 +287,9 @@ class POIApp:
 
         tk.Button(
             self.nbr_panel, text="Save Profile",
-            bg="#C13584", fg="white", font=("Helvetica", 13, "bold"),
-            relief="flat", padx=28, pady=10,
-            command=self._save_instagram,
-        ).pack(pady=20)
+            bg="#C13584", fg="white", command=self._save_instagram,
+            **BTN,
+        ).pack(pady=24)
 
         self._insta_status = tk.Label(self.nbr_panel, text="", bg="#F2F2F7",
                                       font=("Helvetica", 11), fg="#27AE60")
@@ -304,15 +314,15 @@ class POIApp:
 
     def _show_map_tab(self):
         self.active_tab = "map"
-        self._tab_map_btn.config(font=("Helvetica", 12, "bold"), fg="white")
-        self._tab_nbr_btn.config(font=("Helvetica", 12), fg="#888888")
+        self._tab_map_btn.config(font=("Helvetica", 15, "bold"), fg="white")
+        self._tab_nbr_btn.config(font=("Helvetica", 15), fg="#888888")
         self.nbr_panel.pack_forget()
         self.map_panel.pack(fill="both", expand=True)
 
     def _show_neighbors_tab(self):
         self.active_tab = "neighbors"
-        self._tab_nbr_btn.config(font=("Helvetica", 12, "bold"), fg="white")
-        self._tab_map_btn.config(font=("Helvetica", 12), fg="#888888")
+        self._tab_nbr_btn.config(font=("Helvetica", 15, "bold"), fg="white")
+        self._tab_map_btn.config(font=("Helvetica", 15), fg="#888888")
         self.map_panel.pack_forget()
         self.nbr_panel.pack(fill="both", expand=True)
 
@@ -375,8 +385,8 @@ class POIApp:
             )
             self.info_lbl.pack(fill="x")
         else:
-            self.back_btn.pack(side="left", padx=4, pady=3)
-            self.add_btn.pack(side="left",  padx=4, pady=3)
+            self.back_btn.pack(side="left", padx=8, pady=6)
+            self.add_btn.pack(side="left",  padx=8, pady=6)
             self.info_lbl.config(
                 text=f"Building {self.active_bld + 1}  —  click a marker to open  •  drag to reposition"
             )

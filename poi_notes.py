@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""POI Notes — two-level campus map annotations with per-hour rich notes."""
+"""meow — campus map annotations with neighbor matching."""
 
 import datetime
 import json
@@ -10,21 +10,24 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 
+# ── button style constants ────────────────────────────────────────────────────
 BTN = dict(font=("Helvetica", 18, "bold"), relief="raised", bd=4,
            padx=28, pady=16, cursor="hand2")
 BTN_SM = dict(font=("Helvetica", 15, "bold"), relief="raised", bd=3,
               padx=20, pady=12, cursor="hand2")
 
-# Mock neighbors for prototype (backend will replace this)
+# ── mock neighbor data (backend will replace) ─────────────────────────────────
+# show_insta=False → person does not appear in browse at all
+# show_dorm=False  → dorm hidden on card, revealed only on match
+# only_to_likers   → only appears to people they've already liked (backend enforced)
 MOCK_NEIGHBORS = [
-    {"dorm": "Travers Hall, Rm 214"},
-    {"dorm": "Wolfe Hall, Rm 118"},
-    {"dorm": "Cromwell Hall, Rm 305"},
-    {"dorm": "Eickhoff Hall, Rm 402"},
-    {"dorm": "Centennial Hall, Rm 110"},
+    {"dorm": "Travers Hall, Rm 214",    "instagram": "alex_tcnj",     "show_insta": True,  "show_dorm": True,  "only_to_likers": False},
+    {"dorm": "Wolfe Hall, Rm 118",      "instagram": "campus_wolf",   "show_insta": True,  "show_dorm": True,  "only_to_likers": False},
+    {"dorm": "Cromwell Hall, Rm 305",   "instagram": "crom_private",  "show_insta": False, "show_dorm": True,  "only_to_likers": False},
+    {"dorm": "Eickhoff Hall, Rm 402",   "instagram": "eick_neighbor", "show_insta": True,  "show_dorm": False, "only_to_likers": False},
+    {"dorm": "Centennial Hall, Rm 110", "instagram": "cent_hall110",  "show_insta": True,  "show_dorm": True,  "only_to_likers": True},
 ]
-# Deterministic fake "did they like you back" — odd index = yes
-_LIKED_YOU_BACK = {0: False, 1: True, 2: False, 3: True, 4: True}
+_LIKED_YOU_BACK = {0: False, 1: True, 3: True, 4: True}
 
 BLD_COLORS = ["#E74C3C", "#27AE60", "#2980B9", "#F39C12"]
 BLD_HANDLE = 7
@@ -36,7 +39,6 @@ DEFAULT_RECTS = [
     (0.05, 0.75, 0.25, 0.95),
     (0.75, 0.75, 0.95, 0.95),
 ]
-
 CORNER_KEYS = [
     ("rx1", "ry1"), ("rx2", "ry1"),
     ("rx1", "ry2"), ("rx2", "ry2"),
@@ -49,24 +51,21 @@ MAX_IMG_WIDTH = 400
 
 
 class MediaEditor(tk.Toplevel):
-    """Per-hour rich text + image editor for a sub-marker."""
-
     def __init__(self, parent, window_title, subtitle, marker_title, content, media_dir, on_save):
         super().__init__(parent)
         self.title(window_title)
-        self.geometry("500x500")
+        self.geometry("520x520")
         self.resizable(True, True)
         self.grab_set()
 
         self.media_dir = media_dir
         self.on_save   = on_save
-        self._photos   = {}  # tk image name -> PhotoImage (prevent GC)
-        self._paths    = {}  # tk image name -> filename relative to media_dir
+        self._photos   = {}
+        self._paths    = {}
 
         tk.Label(self, text=window_title, font=("Helvetica", 15, "bold"), fg=SUB_COLOR).pack(pady=(14, 0))
-        tk.Label(self, text=subtitle,     font=("Helvetica", 10),          fg="#888888").pack(pady=(2, 8))
+        tk.Label(self, text=subtitle,     font=("Helvetica", 10),         fg="#888888").pack(pady=(2, 8))
 
-        # Title field
         title_row = tk.Frame(self)
         title_row.pack(fill="x", padx=16, pady=(0, 8))
         tk.Label(title_row, text="Title:", font=("Helvetica", 12, "bold"), width=6, anchor="w").pack(side="left")
@@ -74,13 +73,10 @@ class MediaEditor(tk.Toplevel):
         tk.Entry(title_row, textvariable=self._title_var,
                  font=("Helvetica", 13)).pack(side="left", fill="x", expand=True, ipady=4)
 
-        # Toolbar
         toolbar = tk.Frame(self, pady=4)
         toolbar.pack(fill="x", padx=16)
-        tk.Button(toolbar, text="Insert Image", command=self._add_image,
-                  **BTN_SM).pack(side="left")
+        tk.Button(toolbar, text="Insert Image", command=self._add_image, **BTN_SM).pack(side="left")
 
-        # Text + scrollbar
         frm = tk.Frame(self)
         frm.pack(fill="both", expand=True, padx=16, pady=6)
         sb = tk.Scrollbar(frm)
@@ -89,16 +85,14 @@ class MediaEditor(tk.Toplevel):
         self.txt.pack(fill="both", expand=True)
         sb.config(command=self.txt.yview)
 
-        # Buttons
         row = tk.Frame(self)
         row.pack(fill="x", padx=16, pady=(4, 14))
-        tk.Button(row, text="Cancel", command=self.destroy,
-                  **BTN_SM).pack(side="right", padx=(6, 0))
-        tk.Button(row, text="Save", command=self._save,
+        tk.Button(row, text="Cancel", command=self.destroy, **BTN_SM).pack(side="right", padx=(6, 0))
+        tk.Button(row, text="Save",   command=self._save,
                   bg=SUB_COLOR, fg="white", **BTN_SM).pack(side="right")
 
         self._load_content(content)
-        self._title_var.trace_add("write", lambda *_: None)  # keep StringVar alive
+        self._title_var.trace_add("write", lambda *_: None)
         self.txt.focus_set()
         self.bind("<Escape>",         lambda _: self.destroy())
         self.bind("<Control-Return>", lambda _: self._save())
@@ -192,12 +186,11 @@ class POIApp:
         self.sel_date = now.date()
         self.sel_hour = now.hour
 
-        # ── top bar: two centred rows (date / time) ───────────────────────────
+        # ── top bar ───────────────────────────────────────────────────────────
         top = tk.Frame(root, relief="raised", bd=1, pady=10)
         top.pack(fill="x", side="top")
         top.columnconfigure(1, weight=1)
 
-        # Date row
         tk.Button(top, text="◀", command=lambda: self._shift_day(-1),
                   **BTN).grid(row=0, column=0, padx=14, pady=4)
         self._date_lbl = tk.Label(top, font=("Helvetica", 16, "bold"), anchor="center")
@@ -205,7 +198,6 @@ class POIApp:
         tk.Button(top, text="▶", command=lambda: self._shift_day(1),
                   **BTN).grid(row=0, column=2, padx=14, pady=4)
 
-        # Time row
         tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
                   **BTN).grid(row=1, column=0, padx=14, pady=4)
         self._time_lbl = tk.Label(top, font=("Helvetica", 15), anchor="center")
@@ -215,28 +207,34 @@ class POIApp:
 
         self._update_time_display()
 
-        # ── tab bar ───────────────────────────────────────────────────────────
+        # ── bottom tab bar (phone-style) ──────────────────────────────────────
         self.active_tab = "map"
-        tab_bar = tk.Frame(root, bg="#1C1C1E")
+        tab_bar = tk.Frame(root, bg="#1C1C1E", pady=0)
         tab_bar.pack(fill="x", side="bottom")
-        tab_bar.columnconfigure(0, weight=1)
-        tab_bar.columnconfigure(1, weight=1)
+        for c in range(3):
+            tab_bar.columnconfigure(c, weight=1)
+
+        tab_cfg = dict(bg="#1C1C1E", activebackground="#2C2C2E",
+                       activeforeground="white", relief="flat",
+                       pady=22, cursor="hand2", bd=0)
 
         self._tab_map_btn = tk.Button(
-            tab_bar, text="Map", font=("Helvetica", 15, "bold"),
-            bg="#1C1C1E", fg="white", activebackground="#2C2C2E",
-            activeforeground="white", relief="flat", pady=14,
-            cursor="hand2", command=self._show_map_tab,
-        )
+            tab_bar, text="🗺  Map",
+            font=("Helvetica", 16, "bold"), fg="white",
+            command=self._show_map_tab, **tab_cfg)
         self._tab_map_btn.grid(row=0, column=0, sticky="ew")
 
         self._tab_nbr_btn = tk.Button(
-            tab_bar, text="Neighbors", font=("Helvetica", 15),
-            bg="#1C1C1E", fg="#888888", activebackground="#2C2C2E",
-            activeforeground="white", relief="flat", pady=14,
-            cursor="hand2", command=self._show_neighbors_tab,
-        )
+            tab_bar, text="👥  Neighbors",
+            font=("Helvetica", 16), fg="#666666",
+            command=self._show_neighbors_tab, **tab_cfg)
         self._tab_nbr_btn.grid(row=0, column=1, sticky="ew")
+
+        self._tab_inbox_btn = tk.Button(
+            tab_bar, text="💬  Inbox",
+            font=("Helvetica", 16), fg="#666666",
+            command=self._show_inbox_tab, **tab_cfg)
+        self._tab_inbox_btn.grid(row=0, column=2, sticky="ew")
 
         # ── map panel ─────────────────────────────────────────────────────────
         self.map_panel = tk.Frame(root)
@@ -244,22 +242,20 @@ class POIApp:
 
         self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
         self.bar.pack(fill="x", side="bottom")
-        self.back_btn = tk.Button(self.bar, text="← Back to Map", command=self._go_back,
+        self.back_btn = tk.Button(self.bar, text="← Back", command=self._go_back,
                                   bg="#2980B9", fg="white", **BTN)
-        self.add_btn  = tk.Button(self.bar, text="+ Add Marker",  command=self._add_sub_poi,
+        self.add_btn  = tk.Button(self.bar, text="+ Marker", command=self._add_sub_poi,
                                   bg="#27AE60", fg="white", **BTN)
         self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 12))
 
         self.canvas = tk.Canvas(self.map_panel, bg="black")
         self.canvas.pack(fill="both", expand=True)
 
-        # ── neighbors panel (two sub-views: profile / browse) ────────────────
+        # ── neighbors panel ───────────────────────────────────────────────────
         self.nbr_panel = tk.Frame(root, bg="#F2F2F7")
 
-        # top nav within neighbors
         nbr_nav = tk.Frame(self.nbr_panel, bg="#F2F2F7")
         nbr_nav.pack(fill="x", padx=20, pady=(14, 0))
-
         self._nbr_view = "browse"
 
         self._nbr_profile_btn = tk.Button(
@@ -276,17 +272,21 @@ class POIApp:
         self._profile_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._profile_view, text="My Profile", bg="#F2F2F7",
-                 font=("Helvetica", 20, "bold"), pady=12).pack()
-        tk.Label(self._profile_view,
-                 text="Your dorm is visible to neighbors.  Instagram is only revealed on a match.",
-                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11),
-                 wraplength=400).pack(pady=(0, 16))
+                 font=("Helvetica", 20, "bold"), pady=10).pack()
 
         form = tk.Frame(self._profile_view, bg="#F2F2F7")
         form.pack(padx=40, fill="x")
 
-        tk.Label(form, text="Instagram", bg="#F2F2F7",
-                 font=("Helvetica", 13, "bold"), anchor="w").pack(fill="x", pady=(0, 4))
+        # Instagram field + checkbox
+        insta_hdr = tk.Frame(form, bg="#F2F2F7")
+        insta_hdr.pack(fill="x", pady=(0, 4))
+        tk.Label(insta_hdr, text="Instagram", bg="#F2F2F7",
+                 font=("Helvetica", 13, "bold")).pack(side="left")
+        self._pub_insta_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(insta_hdr, text="Show publicly on my card",
+                       variable=self._pub_insta_var, bg="#F2F2F7",
+                       font=("Helvetica", 11), fg="#555555").pack(side="left", padx=12)
+
         insta_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         insta_row.pack(fill="x")
         tk.Label(insta_row, text="@", bg="white",
@@ -296,8 +296,16 @@ class POIApp:
                  font=("Helvetica", 15), relief="flat", bg="white").pack(
                  side="left", fill="x", expand=True, ipady=10)
 
-        tk.Label(form, text="Dorm / Building", bg="#F2F2F7",
-                 font=("Helvetica", 13, "bold"), anchor="w").pack(fill="x", pady=(14, 4))
+        # Dorm field + checkbox
+        dorm_hdr = tk.Frame(form, bg="#F2F2F7")
+        dorm_hdr.pack(fill="x", pady=(14, 4))
+        tk.Label(dorm_hdr, text="Dorm / Building", bg="#F2F2F7",
+                 font=("Helvetica", 13, "bold")).pack(side="left")
+        self._pub_dorm_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(dorm_hdr, text="Show publicly on my card",
+                       variable=self._pub_dorm_var, bg="#F2F2F7",
+                       font=("Helvetica", 11), fg="#555555").pack(side="left", padx=12)
+
         dorm_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         dorm_row.pack(fill="x")
         tk.Label(dorm_row, text="🏠", bg="white",
@@ -307,9 +315,22 @@ class POIApp:
                  font=("Helvetica", 15), relief="flat", bg="white").pack(
                  side="left", fill="x", expand=True, ipady=10)
 
+        # Discoverability checkbox
+        disc_row = tk.Frame(form, bg="#F2F2F7")
+        disc_row.pack(fill="x", pady=(14, 0))
+        self._only_likers_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(disc_row,
+                       text="Only show my profile to people I've already liked",
+                       variable=self._only_likers_var, bg="#F2F2F7",
+                       font=("Helvetica", 11), fg="#555555",
+                       wraplength=380, justify="left").pack(anchor="w")
+        tk.Label(form, text="If checked, you won't appear to others unless you liked them first.",
+                 bg="#F2F2F7", fg="#AAAAAA", font=("Helvetica", 10),
+                 wraplength=380, justify="left").pack(anchor="w", pady=(2, 0))
+
         tk.Button(self._profile_view, text="Save Profile",
-                  bg="#C13584", fg="white", command=self._save_instagram,
-                  **BTN).pack(pady=20)
+                  bg="#C13584", fg="white", command=self._save_profile,
+                  **BTN).pack(pady=18)
 
         self._insta_status = tk.Label(self._profile_view, text="", bg="#F2F2F7",
                                       font=("Helvetica", 12), fg="#27AE60")
@@ -319,35 +340,34 @@ class POIApp:
         self._browse_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._browse_view, text="Neighbors Near You", bg="#F2F2F7",
-                 font=("Helvetica", 20, "bold"), pady=12).pack()
+                 font=("Helvetica", 20, "bold"), pady=10).pack()
         tk.Label(self._browse_view,
-                 text="Your like or pass is completely private.\nInstagram only revealed when you both match.",
-                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11),
-                 justify="center").pack(pady=(0, 14))
+                 text="Your like or pass is completely private until you both match.",
+                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11)).pack(pady=(0, 12))
 
         self._match_idx  = 0
         self._match_data = {}
+        self._browse_order = [i for i, n in enumerate(MOCK_NEIGHBORS) if n["show_insta"]]
 
-        # card
+        # card — text only, no avatar image
         self._card = tk.Frame(self._browse_view, bg="white", relief="ridge", bd=4,
-                              padx=40, pady=28)
+                              padx=50, pady=32)
         self._card.pack()
 
-        self._card_avatar = tk.Label(self._card, text="?", bg="#8E44AD", fg="white",
-                                     font=("Helvetica", 48, "bold"), width=3)
-        self._card_avatar.pack(pady=(0, 10))
+        self._card_gram = tk.Label(self._card, text="", bg="white",
+                                   font=("Helvetica", 26, "bold"), fg="#C13584")
+        self._card_gram.pack(pady=(0, 8))
 
         self._card_dorm = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 17, "bold"))
+                                   font=("Helvetica", 15), fg="#444444")
         self._card_dorm.pack()
 
-        self._card_insta = tk.Label(self._card, text="instagram hidden until match",
-                                    bg="white", fg="#AAAAAA", font=("Helvetica", 12, "italic"))
-        self._card_insta.pack(pady=(6, 0))
+        self._card_note = tk.Label(self._card, text="", bg="white",
+                                   font=("Helvetica", 11, "italic"), fg="#AAAAAA")
+        self._card_note.pack(pady=(6, 0))
 
-        # swipe buttons
         swipe_row = tk.Frame(self._browse_view, bg="#F2F2F7")
-        swipe_row.pack(pady=20)
+        swipe_row.pack(pady=18)
 
         self._pass_btn = tk.Button(swipe_row, text="✕  Pass",
                                    bg="#E74C3C", fg="white",
@@ -359,7 +379,19 @@ class POIApp:
                                    command=self._swipe_like, **BTN)
         self._like_btn.pack(side="left", padx=20)
 
-        self._load_instagram()
+        # ── inbox panel ───────────────────────────────────────────────────────
+        self.inbox_panel = tk.Frame(root, bg="#F2F2F7")
+
+        tk.Label(self.inbox_panel, text="Inbox", bg="#F2F2F7",
+                 font=("Helvetica", 22, "bold"), pady=16).pack()
+
+        self._inbox_list_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
+        self._inbox_list_frame.pack(fill="both", expand=True, padx=20)
+
+        self._inbox_detail_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
+
+        # load data and build UI state
+        self._load_profile()
         self._advance_card()
         self._show_nbr_browse()
 
@@ -378,35 +410,34 @@ class POIApp:
         self.canvas.bind("<ButtonRelease-1>", self._release)
         self.canvas.bind("<Configure>",       self._on_configure)
 
-    def _show_map_tab(self):
-        self.active_tab = "map"
-        self._tab_map_btn.config(font=("Helvetica", 15, "bold"), fg="white")
-        self._tab_nbr_btn.config(font=("Helvetica", 15), fg="#888888")
-        self.nbr_panel.pack_forget()
-        self.map_panel.pack(fill="both", expand=True)
+    # ── tab switching ─────────────────────────────────────────────────────────
 
-    def _show_neighbors_tab(self):
-        self.active_tab = "neighbors"
-        self._tab_nbr_btn.config(font=("Helvetica", 15, "bold"), fg="white")
-        self._tab_map_btn.config(font=("Helvetica", 15), fg="#888888")
+    def _set_tab(self, name):
+        self.active_tab = name
+        inactive = dict(font=("Helvetica", 16), fg="#666666")
+        active   = dict(font=("Helvetica", 16, "bold"), fg="white")
+        self._tab_map_btn.config(**(active   if name == "map"       else inactive))
+        self._tab_nbr_btn.config(**(active   if name == "neighbors" else inactive))
+        self._tab_inbox_btn.config(**(active if name == "inbox"     else inactive))
         self.map_panel.pack_forget()
-        self.nbr_panel.pack(fill="both", expand=True)
+        self.nbr_panel.pack_forget()
+        self.inbox_panel.pack_forget()
+        if name == "map":
+            self.map_panel.pack(fill="both", expand=True)
+        elif name == "neighbors":
+            self.nbr_panel.pack(fill="both", expand=True)
+        else:
+            self._build_inbox()
+            self.inbox_panel.pack(fill="both", expand=True)
 
-    def _save_instagram(self):
-        handle = self._insta_var.get().strip().lstrip("@")
-        dorm   = self._dorm_var.get().strip()
-        profile = {}
-        if os.path.exists(self.data_path):
-            with open(self.data_path) as f:
-                profile = json.load(f)
-        profile["instagram"] = handle
-        profile["dorm"]      = dorm
-        with open(self.data_path, "w") as f:
-            json.dump(profile, f, indent=2)
-        self._insta_status.config(text="Profile saved!")
+    def _show_map_tab(self):       self._set_tab("map")
+    def _show_neighbors_tab(self): self._set_tab("neighbors")
+    def _show_inbox_tab(self):     self._set_tab("inbox")
+
+    # ── neighbors sub-views ───────────────────────────────────────────────────
 
     def _show_nbr_profile(self):
-        self._nbr_view = "profile"
+        self._nbr_view = "browse"
         self._browse_view.pack_forget()
         self._profile_view.pack(fill="both", expand=True)
         self._nbr_profile_btn.config(bg="#8E44AD", fg="white")
@@ -419,41 +450,68 @@ class POIApp:
         self._nbr_browse_btn.config(bg="#8E44AD", fg="white")
         self._nbr_profile_btn.config(bg="#CCCCCC", fg="#333333")
 
-    def _load_instagram(self):
+    # ── profile save / load ───────────────────────────────────────────────────
+
+    def _save_profile(self):
+        profile = {}
         if os.path.exists(self.data_path):
             with open(self.data_path) as f:
-                data = json.load(f)
-            self._insta_var.set(data.get("instagram", ""))
-            self._dorm_var.set(data.get("dorm", ""))
-            self._match_data = data.get("match_data", {})
+                profile = json.load(f)
+        profile["instagram"]    = self._insta_var.get().strip().lstrip("@")
+        profile["dorm"]         = self._dorm_var.get().strip()
+        profile["pub_insta"]    = self._pub_insta_var.get()
+        profile["pub_dorm"]     = self._pub_dorm_var.get()
+        profile["only_likers"]  = self._only_likers_var.get()
+        with open(self.data_path, "w") as f:
+            json.dump(profile, f, indent=2)
+        self._insta_status.config(text="Profile saved!")
+
+    def _load_profile(self):
+        if not os.path.exists(self.data_path):
+            return
+        with open(self.data_path) as f:
+            data = json.load(f)
+        self._insta_var.set(data.get("instagram", ""))
+        self._dorm_var.set(data.get("dorm", ""))
+        self._pub_insta_var.set(data.get("pub_insta", True))
+        self._pub_dorm_var.set(data.get("pub_dorm", True))
+        self._only_likers_var.set(data.get("only_likers", False))
+        self._match_data = data.get("match_data", {})
+
+    # ── browse / matching ─────────────────────────────────────────────────────
+
+    def _visible_neighbors(self):
+        # Only people who made their instagram public appear in browse
+        return [i for i in self._browse_order
+                if str(i) not in self._match_data]
 
     def _advance_card(self):
-        total = len(MOCK_NEIGHBORS)
-        while self._match_idx < total:
-            if str(self._match_idx) not in self._match_data:
-                break
-            self._match_idx += 1
-
-        if self._match_idx >= total:
-            self._card_avatar.config(text="✓", bg="#27AE60")
-            self._card_dorm.config(text="You've seen everyone!")
-            self._card_insta.config(text="Check back later for new neighbors", fg="#888888")
+        remaining = self._visible_neighbors()
+        if not remaining:
+            self._card_gram.config(text="All done!", fg="#27AE60")
+            self._card_dorm.config(text="No new neighbors right now.")
+            self._card_note.config(text="Check back later.")
             self._pass_btn.config(state="disabled")
-            self._like_btn.config(state="disabled")
+            self._like_btn.config(text="♥  Like", bg="#27AE60",
+                                  command=self._swipe_like, state="disabled")
             return
 
+        self._match_idx = remaining[0]
         nb = MOCK_NEIGHBORS[self._match_idx]
-        self._card_avatar.config(text="?", bg="#8E44AD")
-        self._card_dorm.config(text=nb["dorm"])
-        self._card_insta.config(text="instagram hidden until match", fg="#AAAAAA",
-                                font=("Helvetica", 12, "italic"))
+
+        self._card_gram.config(
+            text=f"@{nb['instagram']}" if nb["show_insta"] else "@hidden",
+            fg="#C13584")
+        self._card_dorm.config(
+            text=nb["dorm"] if nb["show_dorm"] else "Dorm hidden")
+        self._card_note.config(text="instagram & dorm visible · swipe to connect")
         self._pass_btn.config(state="normal")
-        self._like_btn.config(text="♥  Like", bg="#27AE60", command=self._swipe_like)
+        self._like_btn.config(text="♥  Like", bg="#27AE60",
+                              command=self._swipe_like, state="normal")
 
     def _swipe_pass(self):
         self._match_data[str(self._match_idx)] = "passed"
         self._persist_match_data()
-        self._match_idx += 1
         self._advance_card()
 
     def _swipe_like(self):
@@ -462,22 +520,24 @@ class POIApp:
             self._match_data[str(idx)] = "matched"
             self._persist_match_data()
             nb = MOCK_NEIGHBORS[idx]
-            self._card_avatar.config(text="★", bg="#F39C12")
+            self._card_gram.config(text=f"@{nb['instagram']}", fg="#F39C12")
             self._card_dorm.config(text=nb["dorm"])
-            self._card_insta.config(
-                text=f"It's a match!  @{nb.get('instagram', '?')}",
-                fg="#C13584", font=("Helvetica", 14, "bold"))
+            self._card_note.config(
+                text="It's a match!  Check your Inbox ✉",
+                fg="#C13584", font=("Helvetica", 13, "bold"))
             self._pass_btn.config(state="disabled")
             self._like_btn.config(text="Next  →", bg="#2980B9",
-                                  command=self._next_after_match)
+                                  command=self._next_after_match, state="normal")
+            # badge the inbox tab
+            self._tab_inbox_btn.config(text="💬  Inbox ●", fg="#F39C12",
+                                       font=("Helvetica", 16, "bold"))
         else:
             self._match_data[str(idx)] = "liked"
             self._persist_match_data()
-            self._match_idx += 1
             self._advance_card()
 
     def _next_after_match(self):
-        self._match_idx += 1
+        self._card_note.config(fg="#AAAAAA", font=("Helvetica", 11, "italic"))
         self._advance_card()
 
     def _persist_match_data(self):
@@ -488,6 +548,112 @@ class POIApp:
         profile["match_data"] = self._match_data
         with open(self.data_path, "w") as f:
             json.dump(profile, f, indent=2)
+
+    # ── inbox ─────────────────────────────────────────────────────────────────
+
+    def _build_inbox(self):
+        # clear and rebuild the list
+        self._inbox_detail_frame.pack_forget()
+        for w in self._inbox_list_frame.winfo_children():
+            w.destroy()
+
+        matches = [(int(k), v) for k, v in self._match_data.items() if v == "matched"]
+
+        if not matches:
+            tk.Label(self._inbox_list_frame,
+                     text="No matches yet.\nGo browse some neighbors!",
+                     bg="#F2F2F7", fg="#888888",
+                     font=("Helvetica", 14), justify="center").pack(pady=40)
+            return
+
+        for idx, _ in matches:
+            nb   = MOCK_NEIGHBORS[idx]
+            row  = tk.Frame(self._inbox_list_frame, bg="white",
+                            relief="ridge", bd=2, padx=16, pady=12)
+            row.pack(fill="x", pady=6)
+
+            tk.Label(row, text=f"@{nb['instagram']}", bg="white",
+                     font=("Helvetica", 16, "bold"), fg="#C13584").pack(anchor="w")
+            tk.Label(row, text=nb["dorm"], bg="white",
+                     font=("Helvetica", 12), fg="#555555").pack(anchor="w")
+            tk.Label(row, text="Matched!", bg="white",
+                     font=("Helvetica", 11, "italic"), fg="#27AE60").pack(anchor="w")
+
+            tk.Button(row, text="View Profile →",
+                      bg="#8E44AD", fg="white",
+                      command=lambda n=nb: self._open_match_detail(n),
+                      **BTN_SM).pack(anchor="e", pady=(6, 0))
+
+    def _open_match_detail(self, nb):
+        self._inbox_list_frame.pack_forget()
+        for w in self._inbox_detail_frame.winfo_children():
+            w.destroy()
+
+        self._inbox_detail_frame.pack(fill="both", expand=True, padx=30, pady=10)
+
+        tk.Button(self._inbox_detail_frame, text="← Back",
+                  command=self._close_match_detail,
+                  bg="#CCCCCC", fg="#333333", **BTN_SM).pack(anchor="w", pady=(0, 16))
+
+        tk.Label(self._inbox_detail_frame, text=f"@{nb['instagram']}",
+                 bg="#F2F2F7", font=("Helvetica", 28, "bold"), fg="#C13584").pack()
+        tk.Label(self._inbox_detail_frame, text=nb["dorm"],
+                 bg="#F2F2F7", font=("Helvetica", 16), fg="#444444").pack(pady=(8, 0))
+        tk.Label(self._inbox_detail_frame, text="Matched with you",
+                 bg="#F2F2F7", font=("Helvetica", 12, "italic"), fg="#27AE60").pack(pady=(4, 24))
+
+        tk.Button(self._inbox_detail_frame, text="💬  Chat",
+                  bg="#2980B9", fg="white",
+                  command=lambda: self._open_chat(nb),
+                  **BTN).pack()
+
+    def _close_match_detail(self):
+        self._inbox_detail_frame.pack_forget()
+        self._inbox_list_frame.pack(fill="both", expand=True)
+
+    def _open_chat(self, nb):
+        win = tk.Toplevel(self.root)
+        win.title(f"Chat with @{nb['instagram']}")
+        win.geometry("420x500")
+        win.grab_set()
+
+        tk.Label(win, text=f"@{nb['instagram']}",
+                 font=("Helvetica", 16, "bold"), fg="#C13584").pack(pady=(14, 0))
+        tk.Label(win, text=nb["dorm"],
+                 font=("Helvetica", 11), fg="#888888").pack(pady=(2, 10))
+
+        frm = tk.Frame(win)
+        frm.pack(fill="both", expand=True, padx=12, pady=4)
+        sb = tk.Scrollbar(frm)
+        sb.pack(side="right", fill="y")
+        chat_log = tk.Text(frm, wrap="word", font=("Helvetica", 12),
+                           state="disabled", yscrollcommand=sb.set, bg="#F9F9F9")
+        chat_log.pack(fill="both", expand=True)
+        sb.config(command=chat_log.yview)
+
+        entry_row = tk.Frame(win)
+        entry_row.pack(fill="x", padx=12, pady=(0, 12))
+        msg_var = tk.StringVar()
+        entry = tk.Entry(entry_row, textvariable=msg_var,
+                         font=("Helvetica", 13), relief="solid", bd=1)
+        entry.pack(side="left", fill="x", expand=True, ipady=8, padx=(0, 8))
+
+        def send(_=None):
+            msg = msg_var.get().strip()
+            if not msg:
+                return
+            chat_log.config(state="normal")
+            chat_log.insert(tk.END, f"You:  {msg}\n\n")
+            chat_log.config(state="disabled")
+            chat_log.see(tk.END)
+            msg_var.set("")
+
+        tk.Button(entry_row, text="Send", bg="#2980B9", fg="white",
+                  command=send, **BTN_SM).pack(side="left")
+        entry.bind("<Return>", send)
+        entry.focus_set()
+
+    # ── map methods ───────────────────────────────────────────────────────────
 
     def _note_key(self):
         return f"{self.sel_date.isoformat()}T{self.sel_hour:02d}"
@@ -524,7 +690,7 @@ class POIApp:
             w.pack_forget()
         if self.view == "main":
             self.info_lbl.config(
-                text="Click inside a box to zoom in  •  Drag box to move  •  Drag corner to resize"
+                text="Click a box to zoom in  •  Drag to move  •  Drag corner to resize"
             )
             self.info_lbl.pack(fill="x")
         else:
@@ -573,8 +739,13 @@ class POIApp:
         ]
 
     def _save(self):
+        data = {}
+        if os.path.exists(self.data_path):
+            with open(self.data_path) as f:
+                data = json.load(f)
+        data["buildings"] = self.buildings
         with open(self.data_path, "w") as f:
-            json.dump({"buildings": self.buildings}, f, indent=2)
+            json.dump(data, f, indent=2)
 
     def _enter_building(self, idx):
         self.view       = "building"
@@ -668,14 +839,10 @@ class POIApp:
         x, y     = self._sub_xy(sub_idx)
         ids      = []
 
-        # Title badge above the circle
         if title:
             txt_id = self.canvas.create_text(
-                x, y - SUB_RADIUS - 7,
-                text=title,
-                font=("Helvetica", 9, "bold"),
-                fill="white",
-                anchor="s",
+                x, y - SUB_RADIUS - 7, text=title,
+                font=("Helvetica", 9, "bold"), fill="white", anchor="s",
             )
             bbox = self.canvas.bbox(txt_id)
             if bbox:
@@ -690,18 +857,15 @@ class POIApp:
             else:
                 ids.append(txt_id)
 
-        # Circle
         ids.append(self.canvas.create_oval(
             x - SUB_RADIUS, y - SUB_RADIUS, x + SUB_RADIUS, y + SUB_RADIUS,
             fill=SUB_COLOR if has_note else "#FFFFFF", outline=SUB_COLOR, width=3,
         ))
-        # Number
         ids.append(self.canvas.create_text(
             x, y, text=str(sub_idx + 1),
             font=("Helvetica", 10, "bold"),
             fill="white" if has_note else SUB_COLOR,
         ))
-
         self._sub_items[sub_idx] = ids
 
     def _redraw_sub_pois(self):

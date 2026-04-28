@@ -981,7 +981,7 @@ class POIApp:
         MediaEditor(
             self.root,
             window_title=f"Building {self.active_bld + 1}  ·  Marker {sub_idx + 1}",
-            subtitle=self.selected_datetime().strftime("%A, %B %d %Y  ·  %-I:%M %p"),
+            subtitle=self.selected_datetime().strftime("%A, %B %d %Y  ·  %I:%M %p").replace(" 0", " "),
             marker_title=sp.get("title", ""),
             content=content,
             media_dir=self.media_dir,
@@ -989,7 +989,7 @@ class POIApp:
         )
 
 
-IMAGE_PATH = os.path.expanduser("~/Downloads/TCNJ_MAP2017.png")
+IMAGE_PATH = "/mnt/c/Users/antho/Downloads/TCNJ_2017MAP.png"
 
 
 def main():

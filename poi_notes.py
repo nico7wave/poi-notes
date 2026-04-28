@@ -1383,6 +1383,9 @@ IMAGE_PATH = "/mnt/c/Users/antho/Downloads/TCNJ_2017MAP.png"
 
 
 def main():
+    import sys
+    dev_mode = "--dev" in sys.argv
+
     root = tk.Tk()
 
     if not os.path.exists(IMAGE_PATH):
@@ -1391,9 +1394,16 @@ def main():
         return
 
     def launch_app(email, name):
-        app = POIApp(root, IMAGE_PATH)
-        # add sign-out to title bar area via window title
+        POIApp(root, IMAGE_PATH)
         root.title(f"meow  —  {name}")
+
+    # --dev flag skips login entirely
+    if dev_mode:
+        root.geometry("900x700")
+        root.configure(bg="black")
+        launch_app("dev@local", "Dev")
+        root.mainloop()
+        return
 
     # restore saved session or show login
     saved_email = _load_session()

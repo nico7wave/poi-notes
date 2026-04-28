@@ -1,0 +1,7 @@
+mail_config.json
+accounts.json
+session.json
+*_poi.json
+*_poi_media/
+__pycache__/
+*.pyc

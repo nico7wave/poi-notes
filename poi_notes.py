@@ -187,6 +187,7 @@ class POIApp:
         self._pan_x     = 0
         self._pan_y     = 0
         self._pan_last  = (0, 0)
+        self._zoom_job  = None
 
         now           = datetime.datetime.now()
         self.sel_date = now.date()
@@ -759,7 +760,7 @@ class POIApp:
             self.root.after_cancel(self._resize_job)
         self._resize_job = self.root.after(40, lambda: self._apply_resize(e.width, e.height))
 
-    def _apply_resize(self, cw, ch):
+    def _apply_resize(self, cw, ch, resample=Image.LANCZOS):
         self._resize_job = None
         iw, ih   = self.orig_image.size
         fit      = min(cw / iw, ch / ih)
@@ -770,7 +771,7 @@ class POIApp:
         self.oy  = (ch - self.dh) // 2 + self._pan_y
 
         self.tk_img = ImageTk.PhotoImage(
-            self.orig_image.resize((self.dw, self.dh), Image.LANCZOS)
+            self.orig_image.resize((self.dw, self.dh), resample)
         )
         self.canvas.delete("all")
         self._bld_items = {}
@@ -1035,7 +1036,15 @@ class POIApp:
         self._pan_x = round(e.x - mx * new_dw - (cw - new_dw) // 2)
         self._pan_y = round(e.y - my * new_dh - (ch - new_dh) // 2)
 
-        self._apply_resize(cw, ch)
+        # Fast preview while scrolling; quality redraw once scrolling settles
+        self._apply_resize(cw, ch, resample=Image.NEAREST)
+        if self._zoom_job:
+            self.root.after_cancel(self._zoom_job)
+        self._zoom_job = self.root.after(
+            80, lambda: self._apply_resize(
+                self.canvas.winfo_width(), self.canvas.winfo_height()
+            )
+        )
 
 
 IMAGE_PATH = os.path.expanduser("~/Downloads/TCNJ_MAP2017.png")

@@ -762,21 +762,33 @@ class POIApp:
 
     def _apply_resize(self, cw, ch, resample=Image.LANCZOS):
         self._resize_job = None
-        iw, ih   = self.orig_image.size
-        fit      = min(cw / iw, ch / ih)
-        scale    = fit * self._zoom
-        self.dw  = max(1, int(iw * scale))
-        self.dh  = max(1, int(ih * scale))
-        self.ox  = (cw - self.dw) // 2 + self._pan_x
-        self.oy  = (ch - self.dh) // 2 + self._pan_y
+        iw, ih  = self.orig_image.size
+        fit     = min(cw / iw, ch / ih)
+        scale   = fit * self._zoom
+        self.dw = max(1, int(iw * scale))
+        self.dh = max(1, int(ih * scale))
+        self.ox = (cw - self.dw) // 2 + self._pan_x
+        self.oy = (ch - self.dh) // 2 + self._pan_y
 
-        self.tk_img = ImageTk.PhotoImage(
-            self.orig_image.resize((self.dw, self.dh), resample)
-        )
         self.canvas.delete("all")
         self._bld_items = {}
         self._sub_items = {}
-        self.canvas.create_image(self.ox, self.oy, anchor="nw", image=self.tk_img)
+
+        # Crop to the visible viewport so PIL only resizes screen-sized pixels,
+        # not the full dw×dh (which can be enormous at high zoom).
+        vx1 = max(0, self.ox);  vy1 = max(0, self.oy)
+        vx2 = min(cw, self.ox + self.dw);  vy2 = min(ch, self.oy + self.dh)
+        if vx2 > vx1 and vy2 > vy1:
+            cx1 = max(0, int((vx1 - self.ox) / self.dw * iw))
+            cy1 = max(0, int((vy1 - self.oy) / self.dh * ih))
+            cx2 = min(iw, int((vx2 - self.ox) / self.dw * iw) + 1)
+            cy2 = min(ih, int((vy2 - self.oy) / self.dh * ih) + 1)
+            crop = self.orig_image.crop((cx1, cy1, cx2, cy2))
+            self.tk_img = ImageTk.PhotoImage(
+                crop.resize((vx2 - vx1, vy2 - vy1), resample)
+            )
+            self.canvas.create_image(vx1, vy1, anchor="nw", image=self.tk_img)
+
         for i in range(len(self.buildings)):
             self._draw_building(i)
         self._redraw_sub_pois()

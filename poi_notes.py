@@ -989,7 +989,7 @@ class POIApp:
         )
 
 
-IMAGE_PATH = "/mnt/c/Users/antho/Downloads/TCNJ_2017MAP.png"
+IMAGE_PATH = "/mnt/c/Users/antho/Downloads/TCNJ_MAP2017.png"
 
 
 def main():

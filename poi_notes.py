@@ -181,6 +181,9 @@ class POIApp:
         self.view       = "main"
         self.active_bld = None
         self.zoom_image = None
+        self._pan_x    = 0
+        self._pan_y    = 0
+        self._pan_last = (0, 0)
 
         now           = datetime.datetime.now()
         self.sel_date = now.date()
@@ -248,7 +251,7 @@ class POIApp:
                                   bg="#27AE60", fg="white", **BTN)
         self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 22))
 
-        self.canvas = tk.Canvas(self.map_panel, bg="black")
+        self.canvas = tk.Canvas(self.map_panel, bg="white")
         self.canvas.pack(fill="both", expand=True)
 
         # ── neighbors panel ───────────────────────────────────────────────────
@@ -748,6 +751,8 @@ class POIApp:
             json.dump(data, f, indent=2)
 
     def _enter_building(self, idx):
+        self._pan_x     = 0
+        self._pan_y     = 0
         self.view       = "building"
         self.active_bld = idx
         b      = self.buildings[idx]
@@ -760,6 +765,8 @@ class POIApp:
         self._refresh()
 
     def _go_back(self):
+        self._pan_x     = 0
+        self._pan_y     = 0
         self.view       = "main"
         self.active_bld = None
         self.zoom_image = None
@@ -778,8 +785,8 @@ class POIApp:
         scale  = min(cw / iw, ch / ih)
         self.dw = max(1, int(iw * scale))
         self.dh = max(1, int(ih * scale))
-        self.ox = (cw - self.dw) // 2
-        self.oy = (ch - self.dh) // 2
+        self.ox = (cw - self.dw) // 2 + self._pan_x
+        self.oy = (ch - self.dh) // 2 + self._pan_y
 
         self.tk_img = ImageTk.PhotoImage(src.resize((self.dw, self.dh), Image.LANCZOS))
         self.canvas.delete("all")
@@ -911,6 +918,9 @@ class POIApp:
             if self._action:
                 sp = self.buildings[self.active_bld]["sub_pois"][self._action[1]]
                 self._origin_state = {"rx": sp["rx"], "ry": sp["ry"]}
+        if self._action is None:
+            self._action   = ("pan",)
+            self._pan_last = (e.x, e.y)
         self._drag_origin = (e.x, e.y)
         self._drag_moved  = False
 
@@ -956,9 +966,22 @@ class POIApp:
             sp["ry"] = max(0.0, min(s["ry"] + dry, 1.0))
             self._draw_sub_poi(sub_idx)
 
+        elif self._action[0] == "pan":
+            px = e.x - self._pan_last[0]
+            py = e.y - self._pan_last[1]
+            if px or py:
+                self.canvas.move("all", px, py)
+                self.ox      += px
+                self.oy      += py
+                self._pan_x  += px
+                self._pan_y  += py
+            self._pan_last = (e.x, e.y)
+
     def _release(self, e):
         if self._action is not None:
-            if self._drag_moved:
+            if self._action[0] == "pan":
+                pass
+            elif self._drag_moved:
                 self._save()
             elif self._action[0] == "move":
                 self._enter_building(self._action[1])

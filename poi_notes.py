@@ -2,13 +2,74 @@
 """meow — campus map annotations with neighbor matching."""
 
 import datetime
+import hashlib
 import json
 import os
+import random
 import shutil
+import smtplib
 import uuid
 import tkinter as tk
+from email.mime.text import MIMEText
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
+
+# ── auth paths ───────────────────────────────────────────────────────────────
+_DIR          = os.path.dirname(os.path.abspath(__file__))
+ACCOUNTS_PATH = os.path.join(_DIR, "accounts.json")
+SESSION_PATH  = os.path.join(_DIR, "session.json")
+MAIL_CFG_PATH = os.path.join(_DIR, "mail_config.json")
+
+
+def _hash_pw(password: str, salt: str) -> str:
+    return hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260_000).hex()
+
+def _load_accounts() -> dict:
+    if os.path.exists(ACCOUNTS_PATH):
+        with open(ACCOUNTS_PATH) as f:
+            return json.load(f)
+    return {"users": {}}
+
+def _save_accounts(data: dict):
+    with open(ACCOUNTS_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+
+def _load_session() -> str | None:
+    if os.path.exists(SESSION_PATH):
+        with open(SESSION_PATH) as f:
+            return json.load(f).get("email")
+    return None
+
+def _save_session(email: str):
+    with open(SESSION_PATH, "w") as f:
+        json.dump({"email": email}, f)
+
+def _clear_session():
+    if os.path.exists(SESSION_PATH):
+        os.remove(SESSION_PATH)
+
+def _send_code(to_email: str, code: str) -> bool:
+    """Send verification email. Returns False if SMTP not configured."""
+    if not os.path.exists(MAIL_CFG_PATH):
+        return False
+    try:
+        with open(MAIL_CFG_PATH) as f:
+            cfg = json.load(f)
+        msg = MIMEText(
+            f"Hi!\n\nYour meow verification code is:\n\n"
+            f"  {code}\n\n"
+            f"It expires in 10 minutes. If you didn't request this, ignore this email."
+        )
+        msg["Subject"] = "meow — verify your email"
+        msg["From"]    = cfg["sender"]
+        msg["To"]      = to_email
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as s:
+            s.login(cfg["sender"], cfg["password"])
+            s.send_message(msg)
+        return True
+    except Exception:
+        return False
+
 
 # ── button style constants ────────────────────────────────────────────────────
 BTN = dict(font=("Helvetica", 18, "bold"), relief="raised", bd=4,
@@ -989,16 +1050,299 @@ class POIApp:
         )
 
 
+class LoginWindow:
+    """Login / register / verify flow shown before the main app."""
+
+    PURPLE = "#8E44AD"
+    BG     = "#F2F2F7"
+
+    def __init__(self, root: tk.Tk, on_success):
+        self.root       = root
+        self.on_success = on_success
+        self._code      = None
+        self._code_ts   = None
+        self._reg_email = None
+
+        root.title("meow")
+        root.geometry("440x520")
+        root.resizable(False, False)
+        root.configure(bg=self.BG)
+
+        self._f_login    = self._build_login()
+        self._f_register = self._build_register()
+        self._f_verify   = self._build_verify()
+
+        self._show("login")
+
+    # ── frame switching ───────────────────────────────────────────────────────
+
+    def _show(self, which):
+        for f in (self._f_login, self._f_register, self._f_verify):
+            f.place_forget()
+        frame = {"login": self._f_login, "register": self._f_register,
+                 "verify": self._f_verify}[which]
+        frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+    # ── login frame ───────────────────────────────────────────────────────────
+
+    def _build_login(self):
+        f = tk.Frame(self.root, bg=self.BG)
+
+        tk.Label(f, text="meow", bg=self.BG,
+                 font=("Helvetica", 42, "bold"), fg=self.PURPLE).pack(pady=(52, 4))
+        tk.Label(f, text="campus map for TCNJ", bg=self.BG,
+                 font=("Helvetica", 13), fg="#888888").pack(pady=(0, 32))
+
+        self._login_email = self._field(f, "Email")
+        self._login_pw    = self._field(f, "Password", show="•")
+
+        self._login_err = tk.Label(f, text="", bg=self.BG,
+                                   font=("Helvetica", 11), fg="#E74C3C")
+        self._login_err.pack()
+
+        tk.Button(f, text="Log In", bg=self.PURPLE, fg="white",
+                  font=("Helvetica", 15, "bold"), relief="raised", bd=3,
+                  padx=60, pady=12, cursor="hand2",
+                  command=self._do_login).pack(pady=(10, 0))
+
+        tk.Label(f, text="Don't have an account?", bg=self.BG,
+                 font=("Helvetica", 11), fg="#888888").pack(pady=(24, 2))
+        tk.Button(f, text="Create Account", bg=self.BG, fg=self.PURPLE,
+                  font=("Helvetica", 12, "bold"), relief="flat", bd=0,
+                  cursor="hand2", command=lambda: self._show("register")).pack()
+        return f
+
+    # ── register frame ────────────────────────────────────────────────────────
+
+    def _build_register(self):
+        f = tk.Frame(self.root, bg=self.BG)
+
+        tk.Label(f, text="Create Account", bg=self.BG,
+                 font=("Helvetica", 26, "bold"), fg=self.PURPLE).pack(pady=(40, 2))
+        tk.Label(f, text="Use your TCNJ email to get started", bg=self.BG,
+                 font=("Helvetica", 11), fg="#888888").pack(pady=(0, 20))
+
+        self._reg_name_var  = self._field(f, "Full name")
+        self._reg_email_var = self._field(f, "Email")
+        self._reg_pw_var    = self._field(f, "Password (min 8 chars)", show="•")
+        self._reg_pw2_var   = self._field(f, "Confirm password", show="•")
+
+        self._reg_err = tk.Label(f, text="", bg=self.BG,
+                                 font=("Helvetica", 11), fg="#E74C3C",
+                                 wraplength=380, justify="center")
+        self._reg_err.pack()
+
+        tk.Button(f, text="Send Verification Code", bg=self.PURPLE, fg="white",
+                  font=("Helvetica", 14, "bold"), relief="raised", bd=3,
+                  padx=24, pady=10, cursor="hand2",
+                  command=self._do_register).pack(pady=(8, 0))
+
+        tk.Button(f, text="← Back to login", bg=self.BG, fg="#888888",
+                  font=("Helvetica", 11), relief="flat", bd=0, cursor="hand2",
+                  command=lambda: self._show("login")).pack(pady=(16, 0))
+        return f
+
+    # ── verify frame ──────────────────────────────────────────────────────────
+
+    def _build_verify(self):
+        f = tk.Frame(self.root, bg=self.BG)
+
+        tk.Label(f, text="Check your email", bg=self.BG,
+                 font=("Helvetica", 26, "bold"), fg=self.PURPLE).pack(pady=(60, 6))
+        self._verify_sub = tk.Label(f, text="", bg=self.BG,
+                                    font=("Helvetica", 12), fg="#555555")
+        self._verify_sub.pack(pady=(0, 28))
+
+        tk.Label(f, text="Enter the 6-digit code", bg=self.BG,
+                 font=("Helvetica", 13), fg="#333333").pack()
+        self._verify_code_var = tk.StringVar()
+        tk.Entry(f, textvariable=self._verify_code_var,
+                 font=("Helvetica", 28, "bold"), width=8, justify="center",
+                 relief="solid", bd=2).pack(pady=10)
+
+        self._verify_err = tk.Label(f, text="", bg=self.BG,
+                                    font=("Helvetica", 11), fg="#E74C3C")
+        self._verify_err.pack()
+
+        tk.Button(f, text="Verify & Create Account", bg=self.PURPLE, fg="white",
+                  font=("Helvetica", 14, "bold"), relief="raised", bd=3,
+                  padx=20, pady=10, cursor="hand2",
+                  command=self._do_verify).pack(pady=(8, 0))
+
+        tk.Button(f, text="Resend code", bg=self.BG, fg=self.PURPLE,
+                  font=("Helvetica", 11), relief="flat", bd=0, cursor="hand2",
+                  command=self._resend_code).pack(pady=(14, 0))
+        tk.Button(f, text="← Back", bg=self.BG, fg="#888888",
+                  font=("Helvetica", 11), relief="flat", bd=0, cursor="hand2",
+                  command=lambda: self._show("register")).pack(pady=(4, 0))
+        return f
+
+    # ── helpers ───────────────────────────────────────────────────────────────
+
+    def _field(self, parent, label, show=""):
+        tk.Label(parent, text=label, bg=self.BG,
+                 font=("Helvetica", 12), fg="#333333", anchor="w").pack(
+                 fill="x", padx=48, pady=(6, 0))
+        var = tk.StringVar()
+        tk.Entry(parent, textvariable=var, show=show,
+                 font=("Helvetica", 14), relief="solid", bd=1).pack(
+                 fill="x", padx=48, ipady=8)
+        return var
+
+    def _err(self, label, msg):
+        label.config(text=msg)
+
+    # ── actions ───────────────────────────────────────────────────────────────
+
+    def _do_login(self):
+        email = self._login_email.get().strip().lower()
+        pw    = self._login_pw.get()
+        self._login_err.config(text="")
+
+        if not email or not pw:
+            self._err(self._login_err, "Please fill in all fields.")
+            return
+
+        db   = _load_accounts()
+        user = db["users"].get(email)
+        if not user:
+            self._err(self._login_err, "No account found for that email.")
+            return
+        if not user.get("verified"):
+            self._err(self._login_err, "Email not verified. Create your account again.")
+            return
+        if _hash_pw(pw, user["salt"]) != user["password_hash"]:
+            self._err(self._login_err, "Incorrect password.")
+            return
+
+        _save_session(email)
+        self._launch(email, user["name"])
+
+    def _do_register(self):
+        name  = self._reg_name_var.get().strip()
+        email = self._reg_email_var.get().strip().lower()
+        pw    = self._reg_pw_var.get()
+        pw2   = self._reg_pw2_var.get()
+        self._reg_err.config(text="")
+
+        if not all([name, email, pw, pw2]):
+            self._err(self._reg_err, "Please fill in all fields.")
+            return
+        if len(pw) < 8:
+            self._err(self._reg_err, "Password must be at least 8 characters.")
+            return
+        if pw != pw2:
+            self._err(self._reg_err, "Passwords don't match.")
+            return
+        if "@" not in email or "." not in email.split("@")[-1]:
+            self._err(self._reg_err, "Please enter a valid email address.")
+            return
+
+        db = _load_accounts()
+        if email in db["users"] and db["users"][email].get("verified"):
+            self._err(self._reg_err, "An account with that email already exists.")
+            return
+
+        salt = uuid.uuid4().hex
+        db["users"][email] = {
+            "name":          name,
+            "salt":          salt,
+            "password_hash": _hash_pw(pw, salt),
+            "verified":      False,
+            "created_at":    datetime.datetime.now().isoformat(),
+        }
+        _save_accounts(db)
+
+        self._reg_email  = email
+        self._code       = str(random.randint(100_000, 999_999))
+        self._code_ts    = datetime.datetime.now()
+
+        sent = _send_code(email, self._code)
+        if sent:
+            self._verify_sub.config(text=f"We sent a code to {email}")
+        else:
+            self._verify_sub.config(
+                text=f"SMTP not set up — your code is: {self._code}\n(shown for development)"
+            )
+        self._verify_code_var.set("")
+        self._verify_err.config(text="")
+        self._show("verify")
+
+    def _do_verify(self):
+        entered = self._verify_code_var.get().strip()
+        self._verify_err.config(text="")
+
+        if not self._code:
+            self._err(self._verify_err, "No code pending. Go back and try again.")
+            return
+        age = (datetime.datetime.now() - self._code_ts).total_seconds()
+        if age > 600:
+            self._err(self._verify_err, "Code expired. Please resend.")
+            return
+        if entered != self._code:
+            self._err(self._verify_err, "Incorrect code.")
+            return
+
+        db = _load_accounts()
+        db["users"][self._reg_email]["verified"] = True
+        _save_accounts(db)
+
+        _save_session(self._reg_email)
+        user = db["users"][self._reg_email]
+        self._launch(self._reg_email, user["name"])
+
+    def _resend_code(self):
+        if not self._reg_email:
+            return
+        self._code    = str(random.randint(100_000, 999_999))
+        self._code_ts = datetime.datetime.now()
+        sent = _send_code(self._reg_email, self._code)
+        if sent:
+            self._verify_sub.config(text=f"New code sent to {self._reg_email}")
+        else:
+            self._verify_sub.config(
+                text=f"SMTP not set up — new code: {self._code}"
+            )
+        self._verify_err.config(text="")
+
+    def _launch(self, email, name):
+        for w in self.root.winfo_children():
+            w.destroy()
+        self.root.configure(bg="black")
+        self.root.geometry("900x700")
+        self.root.resizable(True, True)
+        self.on_success(email, name)
+
+
 IMAGE_PATH = "/mnt/c/Users/antho/Downloads/TCNJ_2017MAP.png"
 
 
 def main():
     root = tk.Tk()
+
     if not os.path.exists(IMAGE_PATH):
         messagebox.showerror("File not found", f"Could not find:\n{IMAGE_PATH}")
         root.destroy()
         return
-    POIApp(root, IMAGE_PATH)
+
+    def launch_app(email, name):
+        app = POIApp(root, IMAGE_PATH)
+        # add sign-out to title bar area via window title
+        root.title(f"meow  —  {name}")
+
+    # restore saved session or show login
+    saved_email = _load_session()
+    if saved_email:
+        db   = _load_accounts()
+        user = db["users"].get(saved_email)
+        if user and user.get("verified"):
+            root.geometry("900x700")
+            root.configure(bg="black")
+            launch_app(saved_email, user["name"])
+            root.mainloop()
+            return
+
+    LoginWindow(root, launch_app)
     root.mainloop()
 
 

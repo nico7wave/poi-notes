@@ -47,7 +47,11 @@ CORNER_KEYS = [
 SUB_COLOR     = "#8E44AD"
 SUB_RADIUS    = 14
 DEFAULT_SUB   = [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
-MAX_IMG_WIDTH = 400
+MAX_IMG_WIDTH        = 400
+ZOOM_STEP            = 1.15
+ZOOM_MIN             = 0.5
+ZOOM_MAX             = 10.0
+ZOOM_LABEL_THRESHOLD = 2.5
 
 
 class MediaEditor(tk.Toplevel):
@@ -178,12 +182,11 @@ class POIApp:
         self.ox = 0
         self.oy = 0
 
-        self.view       = "main"
         self.active_bld = None
-        self.zoom_image = None
-        self._pan_x    = 0
-        self._pan_y    = 0
-        self._pan_last = (0, 0)
+        self._zoom      = 1.0
+        self._pan_x     = 0
+        self._pan_y     = 0
+        self._pan_last  = (0, 0)
 
         now           = datetime.datetime.now()
         self.sel_date = now.date()
@@ -245,8 +248,6 @@ class POIApp:
 
         self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
         self.bar.pack(fill="x", side="bottom")
-        self.back_btn = tk.Button(self.bar, text="← Back", command=self._go_back,
-                                  bg="#2980B9", fg="white", **BTN)
         self.add_btn  = tk.Button(self.bar, text="+ Marker", command=self._add_sub_poi,
                                   bg="#27AE60", fg="white", **BTN)
         self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 22))
@@ -412,6 +413,9 @@ class POIApp:
         self.canvas.bind("<B1-Motion>",       self._motion)
         self.canvas.bind("<ButtonRelease-1>", self._release)
         self.canvas.bind("<Configure>",       self._on_configure)
+        self.canvas.bind("<MouseWheel>",      self._on_scroll)
+        self.canvas.bind("<Button-4>",        self._on_scroll)
+        self.canvas.bind("<Button-5>",        self._on_scroll)
 
     # ── tab switching ─────────────────────────────────────────────────────────
 
@@ -671,13 +675,13 @@ class POIApp:
     def _shift_day(self, delta):
         self.sel_date += datetime.timedelta(days=delta)
         self._update_time_display()
-        if self.view == "building":
+        if self.dw > 1:
             self._redraw_sub_pois()
 
     def _shift_hour(self, delta):
         self.sel_hour = (self.sel_hour + delta) % 24
         self._update_time_display()
-        if self.view == "building":
+        if self.dw > 1:
             self._redraw_sub_pois()
 
     def _update_time_display(self):
@@ -689,18 +693,17 @@ class POIApp:
         return datetime.datetime.combine(self.sel_date, datetime.time(self.sel_hour))
 
     def _update_bar(self):
-        for w in (self.back_btn, self.add_btn, self.info_lbl):
+        for w in (self.add_btn, self.info_lbl):
             w.pack_forget()
-        if self.view == "main":
+        if self.active_bld is None:
             self.info_lbl.config(
-                text="Click a box to zoom in  •  Drag to move  •  Drag corner to resize"
+                text="Scroll to zoom  •  Drag to pan  •  Click a box to select  •  Drag corner to resize"
             )
             self.info_lbl.pack(fill="x")
         else:
-            self.back_btn.pack(side="left", padx=8, pady=6)
-            self.add_btn.pack(side="left",  padx=8, pady=6)
+            self.add_btn.pack(side="left", padx=8, pady=6)
             self.info_lbl.config(
-                text=f"Building {self.active_bld + 1}  —  click a marker to open  •  drag to reposition"
+                text=f"Building {self.active_bld + 1} selected  —  + Marker to add  •  click empty space to deselect"
             )
             self.info_lbl.pack(fill="x")
 
@@ -750,28 +753,6 @@ class POIApp:
         with open(self.data_path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def _enter_building(self, idx):
-        self._pan_x     = 0
-        self._pan_y     = 0
-        self.view       = "building"
-        self.active_bld = idx
-        b      = self.buildings[idx]
-        iw, ih = self.orig_image.size
-        self.zoom_image = self.orig_image.crop((
-            int(b["rx1"] * iw), int(b["ry1"] * ih),
-            int(b["rx2"] * iw), int(b["ry2"] * ih),
-        ))
-        self.root.title(f"meow — Building {idx + 1}")
-        self._refresh()
-
-    def _go_back(self):
-        self._pan_x     = 0
-        self._pan_y     = 0
-        self.view       = "main"
-        self.active_bld = None
-        self.zoom_image = None
-        self.root.title("meow")
-        self._refresh()
 
     def _on_configure(self, e):
         if self._resize_job:
@@ -780,25 +761,24 @@ class POIApp:
 
     def _apply_resize(self, cw, ch):
         self._resize_job = None
-        src    = self.zoom_image if self.view == "building" else self.orig_image
-        iw, ih = src.size
-        scale  = min(cw / iw, ch / ih)
-        self.dw = max(1, int(iw * scale))
-        self.dh = max(1, int(ih * scale))
-        self.ox = (cw - self.dw) // 2 + self._pan_x
-        self.oy = (ch - self.dh) // 2 + self._pan_y
+        iw, ih   = self.orig_image.size
+        fit      = min(cw / iw, ch / ih)
+        scale    = fit * self._zoom
+        self.dw  = max(1, int(iw * scale))
+        self.dh  = max(1, int(ih * scale))
+        self.ox  = (cw - self.dw) // 2 + self._pan_x
+        self.oy  = (ch - self.dh) // 2 + self._pan_y
 
-        self.tk_img = ImageTk.PhotoImage(src.resize((self.dw, self.dh), Image.LANCZOS))
+        self.tk_img = ImageTk.PhotoImage(
+            self.orig_image.resize((self.dw, self.dh), Image.LANCZOS)
+        )
         self.canvas.delete("all")
         self._bld_items = {}
         self._sub_items = {}
         self.canvas.create_image(self.ox, self.oy, anchor="nw", image=self.tk_img)
-
-        if self.view == "main":
-            for i in range(len(self.buildings)):
-                self._draw_building(i)
-        else:
-            self._redraw_sub_pois()
+        for i in range(len(self.buildings)):
+            self._draw_building(i)
+        self._redraw_sub_pois()
 
     def _rect_xy(self, i):
         b = self.buildings[i]
@@ -832,21 +812,25 @@ class POIApp:
             ))
         self._bld_items[i] = ids
 
-    def _sub_xy(self, sub_idx):
-        sp = self.buildings[self.active_bld]["sub_pois"][sub_idx]
-        return self.ox + sp["rx"] * self.dw, self.oy + sp["ry"] * self.dh
+    def _sub_xy(self, bld_idx, sub_idx):
+        b  = self.buildings[bld_idx]
+        sp = b["sub_pois"][sub_idx]
+        rx = b["rx1"] + sp["rx"] * (b["rx2"] - b["rx1"])
+        ry = b["ry1"] + sp["ry"] * (b["ry2"] - b["ry1"])
+        return self.ox + rx * self.dw, self.oy + ry * self.dh
 
-    def _draw_sub_poi(self, sub_idx):
-        for cid in self._sub_items.get(sub_idx, ()):
+    def _draw_sub_poi(self, bld_idx, sub_idx):
+        key = (bld_idx, sub_idx)
+        for cid in self._sub_items.get(key, ()):
             self.canvas.delete(cid)
 
-        sp       = self.buildings[self.active_bld]["sub_pois"][sub_idx]
+        sp       = self.buildings[bld_idx]["sub_pois"][sub_idx]
         has_note = self._has_note(sp)
         title    = sp.get("title", "").strip()
-        x, y     = self._sub_xy(sub_idx)
+        x, y     = self._sub_xy(bld_idx, sub_idx)
         ids      = []
 
-        if title:
+        if title and self._zoom >= ZOOM_LABEL_THRESHOLD:
             txt_id = self.canvas.create_text(
                 x, y - SUB_RADIUS - 7, text=title,
                 font=("Helvetica", 16, "bold"), fill="white", anchor="s",
@@ -873,20 +857,20 @@ class POIApp:
             font=("Helvetica", 18, "bold"),
             fill="white" if has_note else SUB_COLOR,
         ))
-        self._sub_items[sub_idx] = ids
+        self._sub_items[key] = ids
 
     def _redraw_sub_pois(self):
-        sps = self.buildings[self.active_bld]["sub_pois"]
-        for i in range(len(sps)):
-            self._draw_sub_poi(i)
+        for bi, bld in enumerate(self.buildings):
+            for si in range(len(bld["sub_pois"])):
+                self._draw_sub_poi(bi, si)
 
     def _add_sub_poi(self):
-        if self.view != "building":
+        if self.active_bld is None:
             return
         sps = self.buildings[self.active_bld]["sub_pois"]
         sps.append({"rx": 0.5, "ry": 0.5, "title": "", "notes": {}})
         self._save()
-        self._draw_sub_poi(len(sps) - 1)
+        self._draw_sub_poi(self.active_bld, len(sps) - 1)
 
     def _hit_main(self, ex, ey):
         for i in range(len(self.buildings)):
@@ -900,24 +884,25 @@ class POIApp:
                 return ("move", i)
         return None
 
-    def _hit_building(self, ex, ey):
-        for i, _ in enumerate(self.buildings[self.active_bld]["sub_pois"]):
-            x, y = self._sub_xy(i)
-            if (ex - x) ** 2 + (ey - y) ** 2 <= (SUB_RADIUS * 1.5) ** 2:
-                return ("sub", i)
+    def _hit_sub_pois(self, ex, ey):
+        for bi, bld in enumerate(self.buildings):
+            for si in range(len(bld["sub_pois"])):
+                x, y = self._sub_xy(bi, si)
+                if (ex - x) ** 2 + (ey - y) ** 2 <= (SUB_RADIUS * 1.5) ** 2:
+                    return ("sub", bi, si)
         return None
 
     def _press(self, e):
-        if self.view == "main":
+        hit = self._hit_sub_pois(e.x, e.y)
+        if hit:
+            self._action = hit
+            sp = self.buildings[hit[1]]["sub_pois"][hit[2]]
+            self._origin_state = {"rx": sp["rx"], "ry": sp["ry"]}
+        else:
             self._action = self._hit_main(e.x, e.y)
             if self._action:
                 b = self.buildings[self._action[1]]
                 self._origin_state = {k: b[k] for k in ("rx1", "ry1", "rx2", "ry2")}
-        else:
-            self._action = self._hit_building(e.x, e.y)
-            if self._action:
-                sp = self.buildings[self.active_bld]["sub_pois"][self._action[1]]
-                self._origin_state = {"rx": sp["rx"], "ry": sp["ry"]}
         if self._action is None:
             self._action   = ("pan",)
             self._pan_last = (e.x, e.y)
@@ -960,11 +945,15 @@ class POIApp:
             self._draw_building(idx)
 
         elif self._action[0] == "sub":
-            sub_idx = self._action[1]
-            sp = self.buildings[self.active_bld]["sub_pois"][sub_idx]
-            sp["rx"] = max(0.0, min(s["rx"] + drx, 1.0))
-            sp["ry"] = max(0.0, min(s["ry"] + dry, 1.0))
-            self._draw_sub_poi(sub_idx)
+            bi  = self._action[1]
+            si  = self._action[2]
+            b   = self.buildings[bi]
+            sp  = b["sub_pois"][si]
+            bpw = (b["rx2"] - b["rx1"]) * self.dw
+            bph = (b["ry2"] - b["ry1"]) * self.dh
+            sp["rx"] = max(0.0, min(s["rx"] + dx / bpw, 1.0))
+            sp["ry"] = max(0.0, min(s["ry"] + dy / bph, 1.0))
+            self._draw_sub_poi(bi, si)
 
         elif self._action[0] == "pan":
             px = e.x - self._pan_last[0]
@@ -980,18 +969,21 @@ class POIApp:
     def _release(self, e):
         if self._action is not None:
             if self._action[0] == "pan":
-                pass
+                if not self._drag_moved:
+                    self.active_bld = None
+                    self._update_bar()
             elif self._drag_moved:
                 self._save()
             elif self._action[0] == "move":
-                self._enter_building(self._action[1])
+                self.active_bld = self._action[1]
+                self._update_bar()
             elif self._action[0] == "sub":
-                self._open_note(self._action[1])
+                self._open_note(self._action[1], self._action[2])
         self._action     = None
         self._drag_moved = False
 
-    def _open_note(self, sub_idx):
-        sp      = self.buildings[self.active_bld]["sub_pois"][sub_idx]
+    def _open_note(self, bld_idx, sub_idx):
+        sp      = self.buildings[bld_idx]["sub_pois"][sub_idx]
         key     = self._note_key()
         content = sp.get("notes", {}).get(key, [])
 
@@ -999,17 +991,51 @@ class POIApp:
             sp["title"] = new_title
             sp.setdefault("notes", {})[key] = new_content
             self._save()
-            self._draw_sub_poi(sub_idx)
+            self._draw_sub_poi(bld_idx, sub_idx)
 
         MediaEditor(
             self.root,
-            window_title=f"Building {self.active_bld + 1}  ·  Marker {sub_idx + 1}",
+            window_title=f"Building {bld_idx + 1}  ·  Marker {sub_idx + 1}",
             subtitle=self.selected_datetime().strftime("%A, %B %d %Y  ·  %-I:%M %p"),
             marker_title=sp.get("title", ""),
             content=content,
             media_dir=self.media_dir,
             on_save=on_save,
         )
+
+
+    def _on_scroll(self, e):
+        if hasattr(e, "delta") and e.delta:
+            direction = 1 if e.delta > 0 else -1
+        elif e.num == 4:
+            direction = 1
+        elif e.num == 5:
+            direction = -1
+        else:
+            return
+
+        new_zoom = max(ZOOM_MIN, min(ZOOM_MAX, self._zoom * (ZOOM_STEP ** direction)))
+        if new_zoom == self._zoom:
+            return
+
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+
+        # fraction of image under cursor
+        mx = (e.x - self.ox) / self.dw if self.dw else 0.5
+        my = (e.y - self.oy) / self.dh if self.dh else 0.5
+
+        self._zoom = new_zoom
+        iw, ih    = self.orig_image.size
+        fit       = min(cw / iw, ch / ih)
+        new_dw    = max(1, int(iw * fit * self._zoom))
+        new_dh    = max(1, int(ih * fit * self._zoom))
+
+        # keep the pixel under cursor fixed: e.x = new_ox + mx * new_dw
+        self._pan_x = round(e.x - mx * new_dw - (cw - new_dw) // 2)
+        self._pan_y = round(e.y - my * new_dh - (ch - new_dh) // 2)
+
+        self._apply_resize(cw, ch)
 
 
 IMAGE_PATH = os.path.expanduser("~/Downloads/TCNJ_MAP2017.png")

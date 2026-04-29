@@ -1231,12 +1231,8 @@ class LoginWindow:
         tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#B89FD0",
                  font=("Helvetica", 13)).pack(pady=(2, 32))
 
-        outer = tk.Frame(f, bg=self.BG)
-        outer.pack(fill="both", expand=True)
-
-        body = tk.Frame(outer, bg=self.BG, padx=44, width=420)
-        body.pack_propagate(False)
-        body.place(relx=0.5, rely=0.5, anchor="center")
+        body = tk.Frame(f, bg=self.BG, padx=44)
+        body.pack(fill="both", expand=True)
 
         self._login_email = self._field(body, "EMAIL", on_return=self._do_login)
         self._login_pw    = self._field(body, "PASSWORD", show="•", on_return=self._do_login)
@@ -1257,61 +1253,47 @@ class LoginWindow:
         return f
 
     def _build_register(self):
-        f = tk.Frame(self.root, bg=self.BG)
+        f = tk.Frame(self.root, bg=self.BG, padx=44)
 
-        outer = tk.Frame(f, bg=self.BG)
-        outer.pack(fill="both", expand=True)
-
-        c = tk.Frame(outer, bg=self.BG, padx=44, width=420)
-        c.pack_propagate(False)
-        c.place(relx=0.5, rely=0.5, anchor="center")
-
-        nav = tk.Frame(c, bg=self.BG)
+        nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("login")).pack(side="left")
 
-        tk.Label(c, text="Create Account", bg=self.BG, fg="#1A1A1A",
+        tk.Label(f, text="Create Account", bg=self.BG, fg="#1A1A1A",
                  font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(12, 0))
-        tk.Label(c, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
+        tk.Label(f, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
                  font=("Helvetica", 12)).pack(anchor="w", pady=(2, 0))
 
-        self._reg_name_var  = self._field(c, "FULL NAME")
-        self._reg_email_var = self._field(c, "EMAIL")
-        self._reg_pw_var    = self._field(c, "PASSWORD  (min 8 chars)", show="•")
-        self._reg_pw2_var   = self._field(c, "CONFIRM PASSWORD", show="•",
+        self._reg_name_var  = self._field(f, "FULL NAME")
+        self._reg_email_var = self._field(f, "EMAIL")
+        self._reg_pw_var    = self._field(f, "PASSWORD  (min 8 chars)", show="•")
+        self._reg_pw2_var   = self._field(f, "CONFIRM PASSWORD", show="•",
                                           on_return=self._do_register)
-        self._reg_err       = self._err_lbl(c)
+        self._reg_err       = self._err_lbl(f)
 
-        self._primary_btn(c, "Send Verification Code", self._do_register)
+        self._primary_btn(f, "Send Verification Code", self._do_register)
         return f
 
     def _build_verify(self):
-        f = tk.Frame(self.root, bg=self.BG)
+        f = tk.Frame(self.root, bg=self.BG, padx=44)
 
-        outer = tk.Frame(f, bg=self.BG)
-        outer.pack(fill="both", expand=True)
-
-        c = tk.Frame(outer, bg=self.BG, padx=44, width=420)
-        c.pack_propagate(False)
-        c.place(relx=0.5, rely=0.45, anchor="center")
-
-        nav = tk.Frame(c, bg=self.BG)
+        nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("register")).pack(side="left")
 
-        tk.Label(c, text="Check your email", bg=self.BG, fg="#1A1A1A",
+        tk.Label(f, text="Check your email", bg=self.BG, fg="#1A1A1A",
                  font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(24, 0))
-        self._verify_sub = tk.Label(c, text="", bg=self.BG, fg="#888888",
+        self._verify_sub = tk.Label(f, text="", bg=self.BG, fg="#888888",
                                     font=("Helvetica", 12), wraplength=320, justify="left")
         self._verify_sub.pack(anchor="w", pady=(4, 0))
 
-        tk.Label(c, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
+        tk.Label(f, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
                  font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(28, 2))
-        code_border = tk.Frame(c, bg="#DEDEDE", padx=1, pady=1)
+        code_border = tk.Frame(f, bg="#DEDEDE", padx=1, pady=1)
         code_border.pack(fill="x")
         self._verify_code_var = tk.StringVar()
         code_e = tk.Entry(code_border, textvariable=self._verify_code_var,
@@ -1323,10 +1305,10 @@ class LoginWindow:
         code_e.bind("<FocusOut>", lambda _: code_border.config(bg="#DEDEDE"))
         code_e.bind("<Return>",   lambda _: self._do_verify())
 
-        self._verify_err = self._err_lbl(c)
-        self._primary_btn(c, "Verify & Create Account", self._do_verify)
+        self._verify_err = self._err_lbl(f)
+        self._primary_btn(f, "Verify & Create Account", self._do_verify)
 
-        row = tk.Frame(c, bg=self.BG)
+        row = tk.Frame(f, bg=self.BG)
         row.pack(pady=(16, 0))
         HoverButton(row, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="Resend code", font=("Helvetica", 12), relief="flat", bd=0,

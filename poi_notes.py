@@ -232,7 +232,6 @@ class POIApp:
         self._on_logout  = on_logout
 
         root.title("meow")
-        root.geometry("1400x1000")
         root.minsize(1000, 700)
 
         self.orig_image  = Image.open(image_path)
@@ -1425,10 +1424,7 @@ class LoginWindow:
             w.destroy()
         self.root.configure(bg="black")
         self.root.resizable(True, True)
-        try:
-            self.root.state("zoomed")
-        except Exception:
-            self.root.geometry("1400x1000")
+        self.root.attributes("-zoomed", True)
         self.on_success(email, name)
 
 
@@ -1462,10 +1458,7 @@ def main():
         root.title(f"meow  —  {name}")
 
     def _maximize():
-        try:
-            root.state("zoomed")
-        except Exception:
-            root.geometry("1400x1000")
+        root.attributes("-zoomed", True)
 
     if dev_mode:
         root.configure(bg="black")

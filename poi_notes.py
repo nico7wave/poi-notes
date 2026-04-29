@@ -300,8 +300,13 @@ class POIApp:
         tk.Label(map_hdr, text="meow", bg="#FFFFFF", fg="#27AE60",
                  font=("Ubuntu Sans", 20, "bold"), padx=18).pack(side="left", pady=14)
 
+        tk.Button(map_hdr, text="Today", command=self._go_today,
+                  bg="#27AE60", fg="white", relief="flat", bd=0,
+                  font=("Ubuntu Sans", 12, "bold"), padx=14,
+                  cursor="hand2").pack(side="right", pady=12, padx=(0, 8))
+
         ctrl = tk.Frame(map_hdr, bg="#FFFFFF")
-        ctrl.pack(side="right", padx=16, pady=10)
+        ctrl.pack(side="right", padx=(0, 8), pady=10)
 
         dpill = tk.Frame(ctrl, bg="#E9F7EF")
         dpill.pack(side="left", padx=(0, 8))
@@ -766,6 +771,14 @@ class POIApp:
             (item["type"] == "text" and item["value"].strip()) or item["type"] == "image"
             for item in content
         )
+
+    def _go_today(self):
+        now = datetime.datetime.now()
+        self.sel_date = now.date()
+        self.sel_hour = now.hour
+        self._update_time_display()
+        if self.dw > 1:
+            self._redraw_sub_pois()
 
     def _shift_day(self, delta):
         self.sel_date += datetime.timedelta(days=delta)

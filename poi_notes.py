@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 
-# ── auth paths ───────────────────────────────────────────────────────────────
+# ── auth paths ────────────────────────────────────────────────────────────────
 _DIR          = os.path.dirname(os.path.abspath(__file__))
 ACCOUNTS_PATH = os.path.join(_DIR, "accounts.json")
 SESSION_PATH  = os.path.join(_DIR, "session.json")
@@ -71,16 +71,13 @@ def _send_code(to_email: str, code: str) -> bool:
         return False
 
 
-# ── button style constants ────────────────────────────────────────────────────
-BTN = dict(font=("Helvetica", 18, "bold"), relief="raised", bd=4,
+# ── button style constants (from map-pan: larger fonts for HiDPI) ─────────────
+BTN = dict(font=("Helvetica", 28, "bold"), relief="raised", bd=4,
            padx=28, pady=16, cursor="hand2")
-BTN_SM = dict(font=("Helvetica", 15, "bold"), relief="raised", bd=3,
+BTN_SM = dict(font=("Helvetica", 24, "bold"), relief="raised", bd=3,
               padx=20, pady=12, cursor="hand2")
 
 # ── mock neighbor data (backend will replace) ─────────────────────────────────
-# show_insta=False → person does not appear in browse at all
-# show_dorm=False  → dorm hidden on card, revealed only on match
-# only_to_likers   → only appears to people they've already liked (backend enforced)
 MOCK_NEIGHBORS = [
     {"dorm": "Travers Hall, Rm 214",    "instagram": "alex_tcnj",     "show_insta": True,  "show_dorm": True,  "only_to_likers": False},
     {"dorm": "Wolfe Hall, Rm 118",      "instagram": "campus_wolf",   "show_insta": True,  "show_dorm": True,  "only_to_likers": False},
@@ -105,17 +102,21 @@ CORNER_KEYS = [
     ("rx1", "ry2"), ("rx2", "ry2"),
 ]
 
-SUB_COLOR     = "#8E44AD"
-SUB_RADIUS    = 14
-DEFAULT_SUB   = [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
-MAX_IMG_WIDTH = 400
+SUB_COLOR            = "#8E44AD"
+SUB_RADIUS           = 14
+DEFAULT_SUB          = [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
+MAX_IMG_WIDTH        = 400
+ZOOM_STEP            = 1.15
+ZOOM_MIN             = 0.5
+ZOOM_MAX             = 10.0
+ZOOM_LABEL_THRESHOLD = 2.5
 
 
 class MediaEditor(tk.Toplevel):
     def __init__(self, parent, window_title, subtitle, marker_title, content, media_dir, on_save):
         super().__init__(parent)
         self.title(window_title)
-        self.geometry("520x520")
+        self.geometry("900x800")
         self.resizable(True, True)
         self.grab_set()
 
@@ -124,32 +125,32 @@ class MediaEditor(tk.Toplevel):
         self._photos   = {}
         self._paths    = {}
 
-        tk.Label(self, text=window_title, font=("Helvetica", 15, "bold"), fg=SUB_COLOR).pack(pady=(14, 0))
-        tk.Label(self, text=subtitle,     font=("Helvetica", 10),         fg="#888888").pack(pady=(2, 8))
+        tk.Label(self, text=window_title, font=("Helvetica", 26, "bold"), fg=SUB_COLOR).pack(pady=(18, 0))
+        tk.Label(self, text=subtitle,     font=("Helvetica", 20),         fg="#888888").pack(pady=(4, 10))
 
         title_row = tk.Frame(self)
-        title_row.pack(fill="x", padx=16, pady=(0, 8))
-        tk.Label(title_row, text="Title:", font=("Helvetica", 12, "bold"), width=6, anchor="w").pack(side="left")
+        title_row.pack(fill="x", padx=20, pady=(0, 10))
+        tk.Label(title_row, text="Title:", font=("Helvetica", 22, "bold"), width=6, anchor="w").pack(side="left")
         self._title_var = tk.StringVar(value=marker_title)
         tk.Entry(title_row, textvariable=self._title_var,
-                 font=("Helvetica", 13)).pack(side="left", fill="x", expand=True, ipady=4)
+                 font=("Helvetica", 24)).pack(side="left", fill="x", expand=True, ipady=6)
 
-        toolbar = tk.Frame(self, pady=4)
-        toolbar.pack(fill="x", padx=16)
+        toolbar = tk.Frame(self, pady=6)
+        toolbar.pack(fill="x", padx=20)
         tk.Button(toolbar, text="Insert Image", command=self._add_image, **BTN_SM).pack(side="left")
 
         frm = tk.Frame(self)
-        frm.pack(fill="both", expand=True, padx=16, pady=6)
+        frm.pack(fill="both", expand=True, padx=20, pady=8)
         sb = tk.Scrollbar(frm)
         sb.pack(side="right", fill="y")
-        self.txt = tk.Text(frm, wrap="word", font=("Helvetica", 13), yscrollcommand=sb.set)
+        self.txt = tk.Text(frm, wrap="word", font=("Helvetica", 24), yscrollcommand=sb.set)
         self.txt.pack(fill="both", expand=True)
         sb.config(command=self.txt.yview)
 
         row = tk.Frame(self)
-        row.pack(fill="x", padx=16, pady=(4, 14))
-        tk.Button(row, text="Cancel", command=self.destroy, **BTN_SM).pack(side="right", padx=(6, 0))
-        tk.Button(row, text="Save",   command=self._save,
+        row.pack(fill="x", padx=20, pady=(6, 18))
+        tk.Button(row, text="Cancel", command=self.destroy, **BTN_SM).pack(side="right", padx=(8, 0))
+        tk.Button(row, text="Save", command=self._save,
                   bg=SUB_COLOR, fg="white", **BTN_SM).pack(side="right")
 
         self._load_content(content)
@@ -228,8 +229,8 @@ class POIApp:
         self.media_dir  = os.path.splitext(image_path)[0] + "_poi_media"
 
         root.title("meow")
-        root.geometry("900x700")
-        root.minsize(700, 550)
+        root.geometry("1400x1000")
+        root.minsize(1000, 700)
 
         self.orig_image  = Image.open(image_path)
         self.tk_img      = None
@@ -239,9 +240,12 @@ class POIApp:
         self.ox = 0
         self.oy = 0
 
-        self.view       = "main"
         self.active_bld = None
-        self.zoom_image = None
+        self._zoom      = 1.0
+        self._pan_x     = 0
+        self._pan_y     = 0
+        self._pan_last  = (0, 0)
+        self._zoom_job  = None
 
         now           = datetime.datetime.now()
         self.sel_date = now.date()
@@ -254,21 +258,21 @@ class POIApp:
 
         tk.Button(top, text="◀", command=lambda: self._shift_day(-1),
                   **BTN).grid(row=0, column=0, padx=14, pady=4)
-        self._date_lbl = tk.Label(top, font=("Helvetica", 16, "bold"), anchor="center")
+        self._date_lbl = tk.Label(top, font=("Helvetica", 28, "bold"), anchor="center")
         self._date_lbl.grid(row=0, column=1, sticky="ew")
         tk.Button(top, text="▶", command=lambda: self._shift_day(1),
                   **BTN).grid(row=0, column=2, padx=14, pady=4)
 
         tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
                   **BTN).grid(row=1, column=0, padx=14, pady=4)
-        self._time_lbl = tk.Label(top, font=("Helvetica", 15), anchor="center")
+        self._time_lbl = tk.Label(top, font=("Helvetica", 26), anchor="center")
         self._time_lbl.grid(row=1, column=1, sticky="ew")
         tk.Button(top, text="▶", command=lambda: self._shift_hour(1),
                   **BTN).grid(row=1, column=2, padx=14, pady=4)
 
         self._update_time_display()
 
-        # ── bottom tab bar (phone-style) ──────────────────────────────────────
+        # ── bottom tab bar ────────────────────────────────────────────────────
         self.active_tab = "map"
         tab_bar = tk.Frame(root, bg="#1C1C1E", pady=0)
         tab_bar.pack(fill="x", side="bottom")
@@ -281,19 +285,19 @@ class POIApp:
 
         self._tab_map_btn = tk.Button(
             tab_bar, text="🗺  Map",
-            font=("Helvetica", 16, "bold"), fg="white",
+            font=("Helvetica", 26, "bold"), fg="white",
             command=self._show_map_tab, **tab_cfg)
         self._tab_map_btn.grid(row=0, column=0, sticky="ew")
 
         self._tab_nbr_btn = tk.Button(
             tab_bar, text="👥  Neighbors",
-            font=("Helvetica", 16), fg="#666666",
+            font=("Helvetica", 26), fg="#666666",
             command=self._show_neighbors_tab, **tab_cfg)
         self._tab_nbr_btn.grid(row=0, column=1, sticky="ew")
 
         self._tab_inbox_btn = tk.Button(
             tab_bar, text="💬  Inbox",
-            font=("Helvetica", 16), fg="#666666",
+            font=("Helvetica", 26), fg="#666666",
             command=self._show_inbox_tab, **tab_cfg)
         self._tab_inbox_btn.grid(row=0, column=2, sticky="ew")
 
@@ -301,28 +305,26 @@ class POIApp:
         self.map_panel = tk.Frame(root)
         self.map_panel.pack(fill="both", expand=True)
 
-        self.bar      = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
+        self.bar     = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
         self.bar.pack(fill="x", side="bottom")
-        self.back_btn = tk.Button(self.bar, text="← Back", command=self._go_back,
-                                  bg="#2980B9", fg="white", **BTN)
-        self.add_btn  = tk.Button(self.bar, text="+ Marker", command=self._add_sub_poi,
-                                  bg="#27AE60", fg="white", **BTN)
-        self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 12))
+        self.add_btn = tk.Button(self.bar, text="+ Marker", command=self._add_sub_poi,
+                                 bg="#27AE60", fg="white", **BTN)
+        self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 22))
 
-        self.canvas = tk.Canvas(self.map_panel, bg="black")
+        self.canvas = tk.Canvas(self.map_panel, bg="white")
         self.canvas.pack(fill="both", expand=True)
 
         # ── neighbors panel ───────────────────────────────────────────────────
         self.nbr_panel = tk.Frame(root, bg="#F2F2F7")
 
         nbr_nav = tk.Frame(self.nbr_panel, bg="#F2F2F7")
-        nbr_nav.pack(fill="x", padx=20, pady=(14, 0))
+        nbr_nav.pack(fill="x", padx=20, pady=(18, 0))
         self._nbr_view = "browse"
 
         self._nbr_profile_btn = tk.Button(
             nbr_nav, text="My Profile", bg="#8E44AD", fg="white",
             command=self._show_nbr_profile, **BTN_SM)
-        self._nbr_profile_btn.pack(side="left", padx=(0, 10))
+        self._nbr_profile_btn.pack(side="left", padx=(0, 14))
 
         self._nbr_browse_btn = tk.Button(
             nbr_nav, text="Browse", bg="#CCCCCC", fg="#333333",
@@ -333,125 +335,120 @@ class POIApp:
         self._profile_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._profile_view, text="My Profile", bg="#F2F2F7",
-                 font=("Helvetica", 20, "bold"), pady=10).pack()
+                 font=("Helvetica", 34, "bold"), pady=14).pack()
 
         form = tk.Frame(self._profile_view, bg="#F2F2F7")
         form.pack(padx=40, fill="x")
 
-        # Instagram field + checkbox
         insta_hdr = tk.Frame(form, bg="#F2F2F7")
-        insta_hdr.pack(fill="x", pady=(0, 4))
+        insta_hdr.pack(fill="x", pady=(0, 6))
         tk.Label(insta_hdr, text="Instagram", bg="#F2F2F7",
-                 font=("Helvetica", 13, "bold")).pack(side="left")
+                 font=("Helvetica", 24, "bold")).pack(side="left")
         self._pub_insta_var = tk.BooleanVar(value=True)
         tk.Checkbutton(insta_hdr, text="Show publicly on my card",
                        variable=self._pub_insta_var, bg="#F2F2F7",
-                       font=("Helvetica", 11), fg="#555555").pack(side="left", padx=12)
+                       font=("Helvetica", 20), fg="#555555").pack(side="left", padx=14)
 
         insta_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         insta_row.pack(fill="x")
         tk.Label(insta_row, text="@", bg="white",
-                 font=("Helvetica", 16, "bold"), fg="#C13584", padx=10).pack(side="left")
+                 font=("Helvetica", 28, "bold"), fg="#C13584", padx=12).pack(side="left")
         self._insta_var = tk.StringVar()
         tk.Entry(insta_row, textvariable=self._insta_var,
-                 font=("Helvetica", 15), relief="flat", bg="white").pack(
-                 side="left", fill="x", expand=True, ipady=10)
+                 font=("Helvetica", 26), relief="flat", bg="white").pack(
+                 side="left", fill="x", expand=True, ipady=12)
 
-        # Dorm field + checkbox
         dorm_hdr = tk.Frame(form, bg="#F2F2F7")
-        dorm_hdr.pack(fill="x", pady=(14, 4))
+        dorm_hdr.pack(fill="x", pady=(18, 6))
         tk.Label(dorm_hdr, text="Dorm / Building", bg="#F2F2F7",
-                 font=("Helvetica", 13, "bold")).pack(side="left")
+                 font=("Helvetica", 24, "bold")).pack(side="left")
         self._pub_dorm_var = tk.BooleanVar(value=True)
         tk.Checkbutton(dorm_hdr, text="Show publicly on my card",
                        variable=self._pub_dorm_var, bg="#F2F2F7",
-                       font=("Helvetica", 11), fg="#555555").pack(side="left", padx=12)
+                       font=("Helvetica", 20), fg="#555555").pack(side="left", padx=14)
 
         dorm_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         dorm_row.pack(fill="x")
         tk.Label(dorm_row, text="🏠", bg="white",
-                 font=("Helvetica", 16), padx=10).pack(side="left")
+                 font=("Helvetica", 28), padx=12).pack(side="left")
         self._dorm_var = tk.StringVar()
         tk.Entry(dorm_row, textvariable=self._dorm_var,
-                 font=("Helvetica", 15), relief="flat", bg="white").pack(
-                 side="left", fill="x", expand=True, ipady=10)
+                 font=("Helvetica", 26), relief="flat", bg="white").pack(
+                 side="left", fill="x", expand=True, ipady=12)
 
-        # Discoverability checkbox
         disc_row = tk.Frame(form, bg="#F2F2F7")
-        disc_row.pack(fill="x", pady=(14, 0))
+        disc_row.pack(fill="x", pady=(18, 0))
         self._only_likers_var = tk.BooleanVar(value=False)
         tk.Checkbutton(disc_row,
                        text="Only show my profile to people I've already liked",
                        variable=self._only_likers_var, bg="#F2F2F7",
-                       font=("Helvetica", 11), fg="#555555",
-                       wraplength=380, justify="left").pack(anchor="w")
+                       font=("Helvetica", 20), fg="#555555",
+                       wraplength=600, justify="left").pack(anchor="w")
         tk.Label(form, text="If checked, you won't appear to others unless you liked them first.",
-                 bg="#F2F2F7", fg="#AAAAAA", font=("Helvetica", 10),
-                 wraplength=380, justify="left").pack(anchor="w", pady=(2, 0))
+                 bg="#F2F2F7", fg="#AAAAAA", font=("Helvetica", 18),
+                 wraplength=600, justify="left").pack(anchor="w", pady=(4, 0))
 
         tk.Button(self._profile_view, text="Save Profile",
                   bg="#C13584", fg="white", command=self._save_profile,
-                  **BTN).pack(pady=18)
+                  **BTN).pack(pady=22)
 
         self._insta_status = tk.Label(self._profile_view, text="", bg="#F2F2F7",
-                                      font=("Helvetica", 12), fg="#27AE60")
+                                      font=("Helvetica", 22), fg="#27AE60")
         self._insta_status.pack()
 
         # ── browse sub-view ───────────────────────────────────────────────────
         self._browse_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._browse_view, text="Neighbors Near You", bg="#F2F2F7",
-                 font=("Helvetica", 20, "bold"), pady=10).pack()
+                 font=("Helvetica", 34, "bold"), pady=14).pack()
         tk.Label(self._browse_view,
                  text="Your like or pass is completely private until you both match.",
-                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 11)).pack(pady=(0, 12))
+                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 20)).pack(pady=(0, 16))
 
-        self._match_idx  = 0
-        self._match_data = {}
+        self._match_idx    = 0
+        self._match_data   = {}
         self._browse_order = [i for i, n in enumerate(MOCK_NEIGHBORS) if n["show_insta"]]
 
-        # card — text only, no avatar image
         self._card = tk.Frame(self._browse_view, bg="white", relief="ridge", bd=4,
-                              padx=50, pady=32)
+                              padx=60, pady=40)
         self._card.pack()
 
         self._card_gram = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 26, "bold"), fg="#C13584")
-        self._card_gram.pack(pady=(0, 8))
+                                   font=("Helvetica", 40, "bold"), fg="#C13584")
+        self._card_gram.pack(pady=(0, 12))
 
         self._card_dorm = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 15), fg="#444444")
+                                   font=("Helvetica", 26), fg="#444444")
         self._card_dorm.pack()
 
         self._card_note = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 11, "italic"), fg="#AAAAAA")
-        self._card_note.pack(pady=(6, 0))
+                                   font=("Helvetica", 20, "italic"), fg="#AAAAAA")
+        self._card_note.pack(pady=(10, 0))
 
         swipe_row = tk.Frame(self._browse_view, bg="#F2F2F7")
-        swipe_row.pack(pady=18)
+        swipe_row.pack(pady=22)
 
         self._pass_btn = tk.Button(swipe_row, text="✕  Pass",
                                    bg="#E74C3C", fg="white",
                                    command=self._swipe_pass, **BTN)
-        self._pass_btn.pack(side="left", padx=20)
+        self._pass_btn.pack(side="left", padx=24)
 
         self._like_btn = tk.Button(swipe_row, text="♥  Like",
                                    bg="#27AE60", fg="white",
                                    command=self._swipe_like, **BTN)
-        self._like_btn.pack(side="left", padx=20)
+        self._like_btn.pack(side="left", padx=24)
 
         # ── inbox panel ───────────────────────────────────────────────────────
         self.inbox_panel = tk.Frame(root, bg="#F2F2F7")
 
         tk.Label(self.inbox_panel, text="Inbox", bg="#F2F2F7",
-                 font=("Helvetica", 22, "bold"), pady=16).pack()
+                 font=("Helvetica", 36, "bold"), pady=20).pack()
 
         self._inbox_list_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
-        self._inbox_list_frame.pack(fill="both", expand=True, padx=20)
+        self._inbox_list_frame.pack(fill="both", expand=True, padx=24)
 
         self._inbox_detail_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
 
-        # load data and build UI state
         self._load_profile()
         self._advance_card()
         self._show_nbr_browse()
@@ -470,13 +467,16 @@ class POIApp:
         self.canvas.bind("<B1-Motion>",       self._motion)
         self.canvas.bind("<ButtonRelease-1>", self._release)
         self.canvas.bind("<Configure>",       self._on_configure)
+        self.canvas.bind("<MouseWheel>",      self._on_scroll)
+        self.canvas.bind("<Button-4>",        self._on_scroll)
+        self.canvas.bind("<Button-5>",        self._on_scroll)
 
     # ── tab switching ─────────────────────────────────────────────────────────
 
     def _set_tab(self, name):
         self.active_tab = name
-        inactive = dict(font=("Helvetica", 16), fg="#666666")
-        active   = dict(font=("Helvetica", 16, "bold"), fg="white")
+        inactive = dict(font=("Helvetica", 26), fg="#666666")
+        active   = dict(font=("Helvetica", 26, "bold"), fg="white")
         self._tab_map_btn.config(**(active   if name == "map"       else inactive))
         self._tab_nbr_btn.config(**(active   if name == "neighbors" else inactive))
         self._tab_inbox_btn.config(**(active if name == "inbox"     else inactive))
@@ -498,14 +498,12 @@ class POIApp:
     # ── neighbors sub-views ───────────────────────────────────────────────────
 
     def _show_nbr_profile(self):
-        self._nbr_view = "browse"
         self._browse_view.pack_forget()
         self._profile_view.pack(fill="both", expand=True)
         self._nbr_profile_btn.config(bg="#8E44AD", fg="white")
         self._nbr_browse_btn.config(bg="#CCCCCC", fg="#333333")
 
     def _show_nbr_browse(self):
-        self._nbr_view = "browse"
         self._profile_view.pack_forget()
         self._browse_view.pack(fill="both", expand=True)
         self._nbr_browse_btn.config(bg="#8E44AD", fg="white")
@@ -518,11 +516,11 @@ class POIApp:
         if os.path.exists(self.data_path):
             with open(self.data_path) as f:
                 profile = json.load(f)
-        profile["instagram"]    = self._insta_var.get().strip().lstrip("@")
-        profile["dorm"]         = self._dorm_var.get().strip()
-        profile["pub_insta"]    = self._pub_insta_var.get()
-        profile["pub_dorm"]     = self._pub_dorm_var.get()
-        profile["only_likers"]  = self._only_likers_var.get()
+        profile["instagram"]   = self._insta_var.get().strip().lstrip("@")
+        profile["dorm"]        = self._dorm_var.get().strip()
+        profile["pub_insta"]   = self._pub_insta_var.get()
+        profile["pub_dorm"]    = self._pub_dorm_var.get()
+        profile["only_likers"] = self._only_likers_var.get()
         with open(self.data_path, "w") as f:
             json.dump(profile, f, indent=2)
         self._insta_status.config(text="Profile saved!")
@@ -542,9 +540,7 @@ class POIApp:
     # ── browse / matching ─────────────────────────────────────────────────────
 
     def _visible_neighbors(self):
-        # Only people who made their instagram public appear in browse
-        return [i for i in self._browse_order
-                if str(i) not in self._match_data]
+        return [i for i in self._browse_order if str(i) not in self._match_data]
 
     def _advance_card(self):
         remaining = self._visible_neighbors()
@@ -559,12 +555,10 @@ class POIApp:
 
         self._match_idx = remaining[0]
         nb = MOCK_NEIGHBORS[self._match_idx]
-
         self._card_gram.config(
             text=f"@{nb['instagram']}" if nb["show_insta"] else "@hidden",
             fg="#C13584")
-        self._card_dorm.config(
-            text=nb["dorm"] if nb["show_dorm"] else "Dorm hidden")
+        self._card_dorm.config(text=nb["dorm"] if nb["show_dorm"] else "Dorm hidden")
         self._card_note.config(text="instagram & dorm visible · swipe to connect")
         self._pass_btn.config(state="normal")
         self._like_btn.config(text="♥  Like", bg="#27AE60",
@@ -585,20 +579,19 @@ class POIApp:
             self._card_dorm.config(text=nb["dorm"])
             self._card_note.config(
                 text="It's a match!  Check your Inbox ✉",
-                fg="#C13584", font=("Helvetica", 13, "bold"))
+                fg="#C13584", font=("Helvetica", 22, "bold"))
             self._pass_btn.config(state="disabled")
             self._like_btn.config(text="Next  →", bg="#2980B9",
                                   command=self._next_after_match, state="normal")
-            # badge the inbox tab
             self._tab_inbox_btn.config(text="💬  Inbox ●", fg="#F39C12",
-                                       font=("Helvetica", 16, "bold"))
+                                       font=("Helvetica", 26, "bold"))
         else:
             self._match_data[str(idx)] = "liked"
             self._persist_match_data()
             self._advance_card()
 
     def _next_after_match(self):
-        self._card_note.config(fg="#AAAAAA", font=("Helvetica", 11, "italic"))
+        self._card_note.config(fg="#AAAAAA", font=("Helvetica", 20, "italic"))
         self._advance_card()
 
     def _persist_match_data(self):
@@ -613,7 +606,6 @@ class POIApp:
     # ── inbox ─────────────────────────────────────────────────────────────────
 
     def _build_inbox(self):
-        # clear and rebuild the list
         self._inbox_detail_frame.pack_forget()
         for w in self._inbox_list_frame.winfo_children():
             w.destroy()
@@ -624,45 +616,40 @@ class POIApp:
             tk.Label(self._inbox_list_frame,
                      text="No matches yet.\nGo browse some neighbors!",
                      bg="#F2F2F7", fg="#888888",
-                     font=("Helvetica", 14), justify="center").pack(pady=40)
+                     font=("Helvetica", 26), justify="center").pack(pady=60)
             return
 
         for idx, _ in matches:
-            nb   = MOCK_NEIGHBORS[idx]
-            row  = tk.Frame(self._inbox_list_frame, bg="white",
-                            relief="ridge", bd=2, padx=16, pady=12)
-            row.pack(fill="x", pady=6)
-
+            nb  = MOCK_NEIGHBORS[idx]
+            row = tk.Frame(self._inbox_list_frame, bg="white",
+                           relief="ridge", bd=2, padx=20, pady=16)
+            row.pack(fill="x", pady=8)
             tk.Label(row, text=f"@{nb['instagram']}", bg="white",
-                     font=("Helvetica", 16, "bold"), fg="#C13584").pack(anchor="w")
+                     font=("Helvetica", 28, "bold"), fg="#C13584").pack(anchor="w")
             tk.Label(row, text=nb["dorm"], bg="white",
-                     font=("Helvetica", 12), fg="#555555").pack(anchor="w")
+                     font=("Helvetica", 22), fg="#555555").pack(anchor="w")
             tk.Label(row, text="Matched!", bg="white",
-                     font=("Helvetica", 11, "italic"), fg="#27AE60").pack(anchor="w")
-
+                     font=("Helvetica", 20, "italic"), fg="#27AE60").pack(anchor="w")
             tk.Button(row, text="View Profile →",
                       bg="#8E44AD", fg="white",
                       command=lambda n=nb: self._open_match_detail(n),
-                      **BTN_SM).pack(anchor="e", pady=(6, 0))
+                      **BTN_SM).pack(anchor="e", pady=(8, 0))
 
     def _open_match_detail(self, nb):
         self._inbox_list_frame.pack_forget()
         for w in self._inbox_detail_frame.winfo_children():
             w.destroy()
-
-        self._inbox_detail_frame.pack(fill="both", expand=True, padx=30, pady=10)
+        self._inbox_detail_frame.pack(fill="both", expand=True, padx=36, pady=14)
 
         tk.Button(self._inbox_detail_frame, text="← Back",
                   command=self._close_match_detail,
-                  bg="#CCCCCC", fg="#333333", **BTN_SM).pack(anchor="w", pady=(0, 16))
-
+                  bg="#CCCCCC", fg="#333333", **BTN_SM).pack(anchor="w", pady=(0, 20))
         tk.Label(self._inbox_detail_frame, text=f"@{nb['instagram']}",
-                 bg="#F2F2F7", font=("Helvetica", 28, "bold"), fg="#C13584").pack()
+                 bg="#F2F2F7", font=("Helvetica", 42, "bold"), fg="#C13584").pack()
         tk.Label(self._inbox_detail_frame, text=nb["dorm"],
-                 bg="#F2F2F7", font=("Helvetica", 16), fg="#444444").pack(pady=(8, 0))
+                 bg="#F2F2F7", font=("Helvetica", 28), fg="#444444").pack(pady=(10, 0))
         tk.Label(self._inbox_detail_frame, text="Matched with you",
-                 bg="#F2F2F7", font=("Helvetica", 12, "italic"), fg="#27AE60").pack(pady=(4, 24))
-
+                 bg="#F2F2F7", font=("Helvetica", 22, "italic"), fg="#27AE60").pack(pady=(6, 28))
         tk.Button(self._inbox_detail_frame, text="💬  Chat",
                   bg="#2980B9", fg="white",
                   command=lambda: self._open_chat(nb),
@@ -675,29 +662,29 @@ class POIApp:
     def _open_chat(self, nb):
         win = tk.Toplevel(self.root)
         win.title(f"Chat with @{nb['instagram']}")
-        win.geometry("420x500")
+        win.geometry("700x800")
         win.grab_set()
 
         tk.Label(win, text=f"@{nb['instagram']}",
-                 font=("Helvetica", 16, "bold"), fg="#C13584").pack(pady=(14, 0))
+                 font=("Helvetica", 28, "bold"), fg="#C13584").pack(pady=(18, 0))
         tk.Label(win, text=nb["dorm"],
-                 font=("Helvetica", 11), fg="#888888").pack(pady=(2, 10))
+                 font=("Helvetica", 20), fg="#888888").pack(pady=(4, 12))
 
         frm = tk.Frame(win)
-        frm.pack(fill="both", expand=True, padx=12, pady=4)
+        frm.pack(fill="both", expand=True, padx=14, pady=4)
         sb = tk.Scrollbar(frm)
         sb.pack(side="right", fill="y")
-        chat_log = tk.Text(frm, wrap="word", font=("Helvetica", 12),
+        chat_log = tk.Text(frm, wrap="word", font=("Helvetica", 22),
                            state="disabled", yscrollcommand=sb.set, bg="#F9F9F9")
         chat_log.pack(fill="both", expand=True)
         sb.config(command=chat_log.yview)
 
         entry_row = tk.Frame(win)
-        entry_row.pack(fill="x", padx=12, pady=(0, 12))
+        entry_row.pack(fill="x", padx=14, pady=(0, 14))
         msg_var = tk.StringVar()
         entry = tk.Entry(entry_row, textvariable=msg_var,
-                         font=("Helvetica", 13), relief="solid", bd=1)
-        entry.pack(side="left", fill="x", expand=True, ipady=8, padx=(0, 8))
+                         font=("Helvetica", 24), relief="solid", bd=1)
+        entry.pack(side="left", fill="x", expand=True, ipady=10, padx=(0, 10))
 
         def send(_=None):
             msg = msg_var.get().strip()
@@ -729,13 +716,13 @@ class POIApp:
     def _shift_day(self, delta):
         self.sel_date += datetime.timedelta(days=delta)
         self._update_time_display()
-        if self.view == "building":
+        if self.dw > 1:
             self._redraw_sub_pois()
 
     def _shift_hour(self, delta):
         self.sel_hour = (self.sel_hour + delta) % 24
         self._update_time_display()
-        if self.view == "building":
+        if self.dw > 1:
             self._redraw_sub_pois()
 
     def _update_time_display(self):
@@ -747,18 +734,17 @@ class POIApp:
         return datetime.datetime.combine(self.sel_date, datetime.time(self.sel_hour))
 
     def _update_bar(self):
-        for w in (self.back_btn, self.add_btn, self.info_lbl):
+        for w in (self.add_btn, self.info_lbl):
             w.pack_forget()
-        if self.view == "main":
+        if self.active_bld is None:
             self.info_lbl.config(
-                text="Click a box to zoom in  •  Drag to move  •  Drag corner to resize"
+                text="Scroll to zoom  •  Drag to pan  •  Click a box to select  •  Drag corner to resize"
             )
             self.info_lbl.pack(fill="x")
         else:
-            self.back_btn.pack(side="left", padx=8, pady=6)
-            self.add_btn.pack(side="left",  padx=8, pady=6)
+            self.add_btn.pack(side="left", padx=8, pady=6)
             self.info_lbl.config(
-                text=f"Building {self.active_bld + 1}  —  click a marker to open  •  drag to reposition"
+                text=f"Building {self.active_bld + 1} selected  —  + Marker to add  •  click empty space to deselect"
             )
             self.info_lbl.pack(fill="x")
 
@@ -808,51 +794,41 @@ class POIApp:
         with open(self.data_path, "w") as f:
             json.dump(data, f, indent=2)
 
-    def _enter_building(self, idx):
-        self.view       = "building"
-        self.active_bld = idx
-        b      = self.buildings[idx]
-        iw, ih = self.orig_image.size
-        self.zoom_image = self.orig_image.crop((
-            int(b["rx1"] * iw), int(b["ry1"] * ih),
-            int(b["rx2"] * iw), int(b["ry2"] * ih),
-        ))
-        self.root.title(f"meow — Building {idx + 1}")
-        self._refresh()
-
-    def _go_back(self):
-        self.view       = "main"
-        self.active_bld = None
-        self.zoom_image = None
-        self.root.title("meow")
-        self._refresh()
-
     def _on_configure(self, e):
         if self._resize_job:
             self.root.after_cancel(self._resize_job)
         self._resize_job = self.root.after(40, lambda: self._apply_resize(e.width, e.height))
 
-    def _apply_resize(self, cw, ch):
+    def _apply_resize(self, cw, ch, resample=Image.LANCZOS):
         self._resize_job = None
-        src    = self.zoom_image if self.view == "building" else self.orig_image
-        iw, ih = src.size
-        scale  = min(cw / iw, ch / ih)
+        iw, ih  = self.orig_image.size
+        fit     = min(cw / iw, ch / ih)
+        scale   = fit * self._zoom
         self.dw = max(1, int(iw * scale))
         self.dh = max(1, int(ih * scale))
-        self.ox = (cw - self.dw) // 2
-        self.oy = (ch - self.dh) // 2
+        self.ox = (cw - self.dw) // 2 + self._pan_x
+        self.oy = (ch - self.dh) // 2 + self._pan_y
 
-        self.tk_img = ImageTk.PhotoImage(src.resize((self.dw, self.dh), Image.LANCZOS))
         self.canvas.delete("all")
         self._bld_items = {}
         self._sub_items = {}
-        self.canvas.create_image(self.ox, self.oy, anchor="nw", image=self.tk_img)
 
-        if self.view == "main":
-            for i in range(len(self.buildings)):
-                self._draw_building(i)
-        else:
-            self._redraw_sub_pois()
+        vx1 = max(0, self.ox);  vy1 = max(0, self.oy)
+        vx2 = min(cw, self.ox + self.dw);  vy2 = min(ch, self.oy + self.dh)
+        if vx2 > vx1 and vy2 > vy1:
+            cx1 = max(0, int((vx1 - self.ox) / self.dw * iw))
+            cy1 = max(0, int((vy1 - self.oy) / self.dh * ih))
+            cx2 = min(iw, int((vx2 - self.ox) / self.dw * iw) + 1)
+            cy2 = min(ih, int((vy2 - self.oy) / self.dh * ih) + 1)
+            crop = self.orig_image.crop((cx1, cy1, cx2, cy2))
+            self.tk_img = ImageTk.PhotoImage(
+                crop.resize((vx2 - vx1, vy2 - vy1), resample)
+            )
+            self.canvas.create_image(vx1, vy1, anchor="nw", image=self.tk_img)
+
+        for i in range(len(self.buildings)):
+            self._draw_building(i)
+        self._redraw_sub_pois()
 
     def _rect_xy(self, i):
         b = self.buildings[i]
@@ -875,7 +851,7 @@ class POIApp:
             self.canvas.create_rectangle(x1, y1, x2, y2, outline=color, width=3, fill=""),
             self.canvas.create_text(
                 (x1 + x2) / 2, (y1 + y2) / 2,
-                text=str(i + 1), font=("Helvetica", 14, "bold"), fill=color,
+                text=str(i + 1), font=("Helvetica", 22, "bold"), fill=color,
             ),
         ]
         for corner in range(4):
@@ -886,24 +862,28 @@ class POIApp:
             ))
         self._bld_items[i] = ids
 
-    def _sub_xy(self, sub_idx):
-        sp = self.buildings[self.active_bld]["sub_pois"][sub_idx]
-        return self.ox + sp["rx"] * self.dw, self.oy + sp["ry"] * self.dh
+    def _sub_xy(self, bld_idx, sub_idx):
+        b  = self.buildings[bld_idx]
+        sp = b["sub_pois"][sub_idx]
+        rx = b["rx1"] + sp["rx"] * (b["rx2"] - b["rx1"])
+        ry = b["ry1"] + sp["ry"] * (b["ry2"] - b["ry1"])
+        return self.ox + rx * self.dw, self.oy + ry * self.dh
 
-    def _draw_sub_poi(self, sub_idx):
-        for cid in self._sub_items.get(sub_idx, ()):
+    def _draw_sub_poi(self, bld_idx, sub_idx):
+        key = (bld_idx, sub_idx)
+        for cid in self._sub_items.get(key, ()):
             self.canvas.delete(cid)
 
-        sp       = self.buildings[self.active_bld]["sub_pois"][sub_idx]
+        sp       = self.buildings[bld_idx]["sub_pois"][sub_idx]
         has_note = self._has_note(sp)
         title    = sp.get("title", "").strip()
-        x, y     = self._sub_xy(sub_idx)
+        x, y     = self._sub_xy(bld_idx, sub_idx)
         ids      = []
 
-        if title:
+        if title and self._zoom >= ZOOM_LABEL_THRESHOLD:
             txt_id = self.canvas.create_text(
                 x, y - SUB_RADIUS - 7, text=title,
-                font=("Helvetica", 9, "bold"), fill="white", anchor="s",
+                font=("Helvetica", 16, "bold"), fill="white", anchor="s",
             )
             bbox = self.canvas.bbox(txt_id)
             if bbox:
@@ -924,23 +904,23 @@ class POIApp:
         ))
         ids.append(self.canvas.create_text(
             x, y, text=str(sub_idx + 1),
-            font=("Helvetica", 10, "bold"),
+            font=("Helvetica", 18, "bold"),
             fill="white" if has_note else SUB_COLOR,
         ))
-        self._sub_items[sub_idx] = ids
+        self._sub_items[key] = ids
 
     def _redraw_sub_pois(self):
-        sps = self.buildings[self.active_bld]["sub_pois"]
-        for i in range(len(sps)):
-            self._draw_sub_poi(i)
+        for bi, bld in enumerate(self.buildings):
+            for si in range(len(bld["sub_pois"])):
+                self._draw_sub_poi(bi, si)
 
     def _add_sub_poi(self):
-        if self.view != "building":
+        if self.active_bld is None:
             return
         sps = self.buildings[self.active_bld]["sub_pois"]
         sps.append({"rx": 0.5, "ry": 0.5, "title": "", "notes": {}})
         self._save()
-        self._draw_sub_poi(len(sps) - 1)
+        self._draw_sub_poi(self.active_bld, len(sps) - 1)
 
     def _hit_main(self, ex, ey):
         for i in range(len(self.buildings)):
@@ -954,24 +934,28 @@ class POIApp:
                 return ("move", i)
         return None
 
-    def _hit_building(self, ex, ey):
-        for i, _ in enumerate(self.buildings[self.active_bld]["sub_pois"]):
-            x, y = self._sub_xy(i)
-            if (ex - x) ** 2 + (ey - y) ** 2 <= (SUB_RADIUS * 1.5) ** 2:
-                return ("sub", i)
+    def _hit_sub_pois(self, ex, ey):
+        for bi, bld in enumerate(self.buildings):
+            for si in range(len(bld["sub_pois"])):
+                x, y = self._sub_xy(bi, si)
+                if (ex - x) ** 2 + (ey - y) ** 2 <= (SUB_RADIUS * 1.5) ** 2:
+                    return ("sub", bi, si)
         return None
 
     def _press(self, e):
-        if self.view == "main":
+        hit = self._hit_sub_pois(e.x, e.y)
+        if hit:
+            self._action = hit
+            sp = self.buildings[hit[1]]["sub_pois"][hit[2]]
+            self._origin_state = {"rx": sp["rx"], "ry": sp["ry"]}
+        else:
             self._action = self._hit_main(e.x, e.y)
             if self._action:
                 b = self.buildings[self._action[1]]
                 self._origin_state = {k: b[k] for k in ("rx1", "ry1", "rx2", "ry2")}
-        else:
-            self._action = self._hit_building(e.x, e.y)
-            if self._action:
-                sp = self.buildings[self.active_bld]["sub_pois"][self._action[1]]
-                self._origin_state = {"rx": sp["rx"], "ry": sp["ry"]}
+        if self._action is None:
+            self._action   = ("pan",)
+            self._pan_last = (e.x, e.y)
         self._drag_origin = (e.x, e.y)
         self._drag_moved  = False
 
@@ -1011,25 +995,45 @@ class POIApp:
             self._draw_building(idx)
 
         elif self._action[0] == "sub":
-            sub_idx = self._action[1]
-            sp = self.buildings[self.active_bld]["sub_pois"][sub_idx]
-            sp["rx"] = max(0.0, min(s["rx"] + drx, 1.0))
-            sp["ry"] = max(0.0, min(s["ry"] + dry, 1.0))
-            self._draw_sub_poi(sub_idx)
+            bi  = self._action[1]
+            si  = self._action[2]
+            b   = self.buildings[bi]
+            sp  = b["sub_pois"][si]
+            bpw = (b["rx2"] - b["rx1"]) * self.dw
+            bph = (b["ry2"] - b["ry1"]) * self.dh
+            sp["rx"] = max(0.0, min(s["rx"] + dx / bpw, 1.0))
+            sp["ry"] = max(0.0, min(s["ry"] + dy / bph, 1.0))
+            self._draw_sub_poi(bi, si)
+
+        elif self._action[0] == "pan":
+            px = e.x - self._pan_last[0]
+            py = e.y - self._pan_last[1]
+            if px or py:
+                self.canvas.move("all", px, py)
+                self.ox     += px
+                self.oy     += py
+                self._pan_x += px
+                self._pan_y += py
+            self._pan_last = (e.x, e.y)
 
     def _release(self, e):
         if self._action is not None:
-            if self._drag_moved:
+            if self._action[0] == "pan":
+                if not self._drag_moved:
+                    self.active_bld = None
+                    self._update_bar()
+            elif self._drag_moved:
                 self._save()
             elif self._action[0] == "move":
-                self._enter_building(self._action[1])
+                self.active_bld = self._action[1]
+                self._update_bar()
             elif self._action[0] == "sub":
-                self._open_note(self._action[1])
+                self._open_note(self._action[1], self._action[2])
         self._action     = None
         self._drag_moved = False
 
-    def _open_note(self, sub_idx):
-        sp      = self.buildings[self.active_bld]["sub_pois"][sub_idx]
+    def _open_note(self, bld_idx, sub_idx):
+        sp      = self.buildings[bld_idx]["sub_pois"][sub_idx]
         key     = self._note_key()
         content = sp.get("notes", {}).get(key, [])
 
@@ -1037,16 +1041,54 @@ class POIApp:
             sp["title"] = new_title
             sp.setdefault("notes", {})[key] = new_content
             self._save()
-            self._draw_sub_poi(sub_idx)
+            self._draw_sub_poi(bld_idx, sub_idx)
 
         MediaEditor(
             self.root,
-            window_title=f"Building {self.active_bld + 1}  ·  Marker {sub_idx + 1}",
+            window_title=f"Building {bld_idx + 1}  ·  Marker {sub_idx + 1}",
             subtitle=self.selected_datetime().strftime("%A, %B %d %Y  ·  %I:%M %p").replace(" 0", " "),
             marker_title=sp.get("title", ""),
             content=content,
             media_dir=self.media_dir,
             on_save=on_save,
+        )
+
+    def _on_scroll(self, e):
+        if hasattr(e, "delta") and e.delta:
+            direction = 1 if e.delta > 0 else -1
+        elif e.num == 4:
+            direction = 1
+        elif e.num == 5:
+            direction = -1
+        else:
+            return
+
+        new_zoom = max(ZOOM_MIN, min(ZOOM_MAX, self._zoom * (ZOOM_STEP ** direction)))
+        if new_zoom == self._zoom:
+            return
+
+        cw = self.canvas.winfo_width()
+        ch = self.canvas.winfo_height()
+
+        mx = (e.x - self.ox) / self.dw if self.dw else 0.5
+        my = (e.y - self.oy) / self.dh if self.dh else 0.5
+
+        self._zoom = new_zoom
+        iw, ih    = self.orig_image.size
+        fit       = min(cw / iw, ch / ih)
+        new_dw    = max(1, int(iw * fit * self._zoom))
+        new_dh    = max(1, int(ih * fit * self._zoom))
+
+        self._pan_x = round(e.x - mx * new_dw - (cw - new_dw) // 2)
+        self._pan_y = round(e.y - my * new_dh - (ch - new_dh) // 2)
+
+        self._apply_resize(cw, ch, resample=Image.NEAREST)
+        if self._zoom_job:
+            self.root.after_cancel(self._zoom_job)
+        self._zoom_job = self.root.after(
+            80, lambda: self._apply_resize(
+                self.canvas.winfo_width(), self.canvas.winfo_height()
+            )
         )
 
 
@@ -1082,18 +1124,13 @@ class LoginWindow:
         self._f_verify   = self._build_verify()
         self._show("login")
 
-    # ── frame switching ───────────────────────────────────────────────────────
-
     def _show(self, which):
         for f in (self._f_login, self._f_register, self._f_verify):
             f.place_forget()
         {"login": self._f_login, "register": self._f_register,
          "verify": self._f_verify}[which].place(relx=0, rely=0, relwidth=1, relheight=1)
 
-    # ── layout helpers ────────────────────────────────────────────────────────
-
     def _card(self, parent):
-        """Centered white card with subtle border on lavender background."""
         tk.Frame(parent, bg=self.BG).pack(expand=True, fill="both")
         card = tk.Frame(parent, bg=self.CARD,
                         highlightbackground=self.BORDER, highlightthickness=1)
@@ -1121,8 +1158,6 @@ class LoginWindow:
     def _err(self, label, msg):
         label.config(text=msg)
 
-    # ── login frame ───────────────────────────────────────────────────────────
-
     def _build_login(self):
         f = tk.Frame(self.root, bg=self.BG)
         card = self._card(f)
@@ -1146,16 +1181,13 @@ class LoginWindow:
                     pady=12, cursor="hand2",
                     command=self._do_login).pack(fill="x", padx=32, pady=(12, 0))
 
-        # ── or separator ──
         sep = tk.Frame(card, bg=self.CARD, height=20)
         sep.pack(fill="x", padx=32, pady=16)
         sep.pack_propagate(False)
-        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x",
-                                                    expand=True, pady=9)
+        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x", expand=True, pady=9)
         tk.Label(sep, text="  or  ", bg=self.CARD, fg="#CCCCCC",
                  font=("Helvetica", 10)).pack(side="left")
-        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x",
-                                                    expand=True, pady=9)
+        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x", expand=True, pady=9)
 
         HoverButton(card, nbg=self.CARD, hbg="#F3E8FF",
                     nfg=self.PURPLE, hfg=self.PURPLE_D,
@@ -1165,8 +1197,6 @@ class LoginWindow:
                     command=lambda: self._show("register")).pack(
                     fill="x", padx=32, pady=(0, 36))
         return f
-
-    # ── register frame ────────────────────────────────────────────────────────
 
     def _build_register(self):
         f = tk.Frame(self.root, bg=self.BG)
@@ -1201,8 +1231,6 @@ class LoginWindow:
                     pady=8, cursor="hand2",
                     command=lambda: self._show("login")).pack(pady=(8, 28))
         return f
-
-    # ── verify frame ──────────────────────────────────────────────────────────
 
     def _build_verify(self):
         f = tk.Frame(self.root, bg=self.BG)
@@ -1254,11 +1282,6 @@ class LoginWindow:
                     command=lambda: self._show("register")).pack(side="left", padx=12)
         return f
 
-    def _err(self, label, msg):
-        label.config(text=msg)
-
-    # ── actions ───────────────────────────────────────────────────────────────
-
     def _do_login(self):
         email = self._login_email.get().strip().lower()
         pw    = self._login_pw.get()
@@ -1267,7 +1290,6 @@ class LoginWindow:
         if not email or not pw:
             self._err(self._login_err, "Please fill in all fields.")
             return
-
         db   = _load_accounts()
         user = db["users"].get(email)
         if not user:
@@ -1279,7 +1301,6 @@ class LoginWindow:
         if _hash_pw(pw, user["salt"]) != user["password_hash"]:
             self._err(self._login_err, "Incorrect password.")
             return
-
         _save_session(email)
         self._launch(email, user["name"])
 
@@ -1302,7 +1323,6 @@ class LoginWindow:
         if "@" not in email or "." not in email.split("@")[-1]:
             self._err(self._reg_err, "Please enter a valid email address.")
             return
-
         db = _load_accounts()
         if email in db["users"] and db["users"][email].get("verified"):
             self._err(self._reg_err, "An account with that email already exists.")
@@ -1318,9 +1338,9 @@ class LoginWindow:
         }
         _save_accounts(db)
 
-        self._reg_email  = email
-        self._code       = str(random.randint(100_000, 999_999))
-        self._code_ts    = datetime.datetime.now()
+        self._reg_email = email
+        self._code      = str(random.randint(100_000, 999_999))
+        self._code_ts   = datetime.datetime.now()
 
         sent = _send_code(email, self._code)
         if sent:
@@ -1351,7 +1371,6 @@ class LoginWindow:
         db = _load_accounts()
         db["users"][self._reg_email]["verified"] = True
         _save_accounts(db)
-
         _save_session(self._reg_email)
         user = db["users"][self._reg_email]
         self._launch(self._reg_email, user["name"])
@@ -1365,16 +1384,14 @@ class LoginWindow:
         if sent:
             self._verify_sub.config(text=f"New code sent to {self._reg_email}")
         else:
-            self._verify_sub.config(
-                text=f"SMTP not set up — new code: {self._code}"
-            )
+            self._verify_sub.config(text=f"SMTP not set up — new code: {self._code}")
         self._verify_err.config(text="")
 
     def _launch(self, email, name):
         for w in self.root.winfo_children():
             w.destroy()
         self.root.configure(bg="black")
-        self.root.geometry("900x700")
+        self.root.geometry("1400x1000")
         self.root.resizable(True, True)
         self.on_success(email, name)
 
@@ -1387,6 +1404,10 @@ def main():
     dev_mode = "--dev" in sys.argv
 
     root = tk.Tk()
+    try:
+        root.tk.call("tk", "scaling", 1.6)
+    except Exception:
+        pass
 
     if not os.path.exists(IMAGE_PATH):
         messagebox.showerror("File not found", f"Could not find:\n{IMAGE_PATH}")
@@ -1397,21 +1418,19 @@ def main():
         POIApp(root, IMAGE_PATH)
         root.title(f"meow  —  {name}")
 
-    # --dev flag skips login entirely
     if dev_mode:
-        root.geometry("900x700")
+        root.geometry("1400x1000")
         root.configure(bg="black")
         launch_app("dev@local", "Dev")
         root.mainloop()
         return
 
-    # restore saved session or show login
     saved_email = _load_session()
     if saved_email:
         db   = _load_accounts()
         user = db["users"].get(saved_email)
         if user and user.get("verified"):
-            root.geometry("900x700")
+            root.geometry("1400x1000")
             root.configure(bg="black")
             launch_app(saved_email, user["name"])
             root.mainloop()

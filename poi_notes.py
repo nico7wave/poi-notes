@@ -1171,8 +1171,7 @@ class LoginWindow:
         self._reg_email = None
 
         root.title("meow")
-        root.geometry("420x600")
-        root.resizable(False, False)
+        root.minsize(420, 580)
         root.configure(bg=self.BG)
 
         self._f_login    = self._build_login()
@@ -1186,7 +1185,7 @@ class LoginWindow:
         {"login": self._f_login, "register": self._f_register,
          "verify": self._f_verify}[which].place(relx=0, rely=0, relwidth=1, relheight=1)
 
-    def _field(self, parent, label, show=""):
+    def _field(self, parent, label, show="", on_return=None):
         tk.Label(parent, text=label, bg=self.BG, fg="#999999",
                  font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(16, 2))
         border = tk.Frame(parent, bg="#DEDEDE", padx=1, pady=1)
@@ -1198,6 +1197,8 @@ class LoginWindow:
         e.pack(fill="x", ipady=11, padx=2, pady=1)
         e.bind("<FocusIn>",  lambda _: border.config(bg=self.PURPLE))
         e.bind("<FocusOut>", lambda _: border.config(bg="#DEDEDE"))
+        if on_return:
+            e.bind("<Return>", lambda _: on_return())
         return var
 
     def _primary_btn(self, parent, text, command, pady_top=20):
@@ -1230,11 +1231,15 @@ class LoginWindow:
         tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#B89FD0",
                  font=("Helvetica", 13)).pack(pady=(2, 32))
 
-        body = tk.Frame(f, bg=self.BG, padx=44)
-        body.pack(fill="both", expand=True)
+        outer = tk.Frame(f, bg=self.BG)
+        outer.pack(fill="both", expand=True)
 
-        self._login_email = self._field(body, "EMAIL")
-        self._login_pw    = self._field(body, "PASSWORD", show="•")
+        body = tk.Frame(outer, bg=self.BG, padx=44, width=420)
+        body.pack_propagate(False)
+        body.place(relx=0.5, rely=0.5, anchor="center")
+
+        self._login_email = self._field(body, "EMAIL", on_return=self._do_login)
+        self._login_pw    = self._field(body, "PASSWORD", show="•", on_return=self._do_login)
         self._login_err   = self._err_lbl(body)
 
         self._primary_btn(body, "Log In", self._do_login)
@@ -1252,46 +1257,61 @@ class LoginWindow:
         return f
 
     def _build_register(self):
-        f = tk.Frame(self.root, bg=self.BG, padx=44)
+        f = tk.Frame(self.root, bg=self.BG)
 
-        nav = tk.Frame(f, bg=self.BG)
+        outer = tk.Frame(f, bg=self.BG)
+        outer.pack(fill="both", expand=True)
+
+        c = tk.Frame(outer, bg=self.BG, padx=44, width=420)
+        c.pack_propagate(False)
+        c.place(relx=0.5, rely=0.5, anchor="center")
+
+        nav = tk.Frame(c, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("login")).pack(side="left")
 
-        tk.Label(f, text="Create Account", bg=self.BG, fg="#1A1A1A",
+        tk.Label(c, text="Create Account", bg=self.BG, fg="#1A1A1A",
                  font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(12, 0))
-        tk.Label(f, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
+        tk.Label(c, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
                  font=("Helvetica", 12)).pack(anchor="w", pady=(2, 0))
 
-        self._reg_name_var  = self._field(f, "FULL NAME")
-        self._reg_email_var = self._field(f, "EMAIL")
-        self._reg_pw_var    = self._field(f, "PASSWORD  (min 8 chars)", show="•")
-        self._reg_pw2_var   = self._field(f, "CONFIRM PASSWORD", show="•")
-        self._reg_err       = self._err_lbl(f)
+        self._reg_name_var  = self._field(c, "FULL NAME")
+        self._reg_email_var = self._field(c, "EMAIL")
+        self._reg_pw_var    = self._field(c, "PASSWORD  (min 8 chars)", show="•")
+        self._reg_pw2_var   = self._field(c, "CONFIRM PASSWORD", show="•",
+                                          on_return=self._do_register)
+        self._reg_err       = self._err_lbl(c)
 
-        self._primary_btn(f, "Send Verification Code", self._do_register)
+        self._primary_btn(c, "Send Verification Code", self._do_register)
         return f
 
     def _build_verify(self):
-        f = tk.Frame(self.root, bg=self.BG, padx=44)
+        f = tk.Frame(self.root, bg=self.BG)
 
-        nav = tk.Frame(f, bg=self.BG)
+        outer = tk.Frame(f, bg=self.BG)
+        outer.pack(fill="both", expand=True)
+
+        c = tk.Frame(outer, bg=self.BG, padx=44, width=420)
+        c.pack_propagate(False)
+        c.place(relx=0.5, rely=0.45, anchor="center")
+
+        nav = tk.Frame(c, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("register")).pack(side="left")
 
-        tk.Label(f, text="Check your email", bg=self.BG, fg="#1A1A1A",
+        tk.Label(c, text="Check your email", bg=self.BG, fg="#1A1A1A",
                  font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(24, 0))
-        self._verify_sub = tk.Label(f, text="", bg=self.BG, fg="#888888",
+        self._verify_sub = tk.Label(c, text="", bg=self.BG, fg="#888888",
                                     font=("Helvetica", 12), wraplength=320, justify="left")
         self._verify_sub.pack(anchor="w", pady=(4, 0))
 
-        tk.Label(f, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
+        tk.Label(c, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
                  font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(28, 2))
-        code_border = tk.Frame(f, bg="#DEDEDE", padx=1, pady=1)
+        code_border = tk.Frame(c, bg="#DEDEDE", padx=1, pady=1)
         code_border.pack(fill="x")
         self._verify_code_var = tk.StringVar()
         code_e = tk.Entry(code_border, textvariable=self._verify_code_var,
@@ -1301,11 +1321,12 @@ class LoginWindow:
         code_e.pack(ipady=12, padx=2, pady=1)
         code_e.bind("<FocusIn>",  lambda _: code_border.config(bg=self.PURPLE))
         code_e.bind("<FocusOut>", lambda _: code_border.config(bg="#DEDEDE"))
+        code_e.bind("<Return>",   lambda _: self._do_verify())
 
-        self._verify_err = self._err_lbl(f)
-        self._primary_btn(f, "Verify & Create Account", self._do_verify)
+        self._verify_err = self._err_lbl(c)
+        self._primary_btn(c, "Verify & Create Account", self._do_verify)
 
-        row = tk.Frame(f, bg=self.BG)
+        row = tk.Frame(c, bg=self.BG)
         row.pack(pady=(16, 0))
         HoverButton(row, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="Resend code", font=("Helvetica", 12), relief="flat", bd=0,
@@ -1421,8 +1442,11 @@ class LoginWindow:
         for w in self.root.winfo_children():
             w.destroy()
         self.root.configure(bg="black")
-        self.root.geometry("1400x1000")
         self.root.resizable(True, True)
+        try:
+            self.root.state("zoomed")
+        except Exception:
+            self.root.geometry("1400x1000")
         self.on_success(email, name)
 
 
@@ -1448,8 +1472,6 @@ def main():
         _clear_session()
         for w in root.winfo_children():
             w.destroy()
-        root.geometry("420x600")
-        root.resizable(False, False)
         root.configure(bg="#FFFFFF")
         LoginWindow(root, launch_app)
 
@@ -1457,9 +1479,15 @@ def main():
         POIApp(root, IMAGE_PATH, email=email, name=name, on_logout=do_logout)
         root.title(f"meow  —  {name}")
 
+    def _maximize():
+        try:
+            root.state("zoomed")
+        except Exception:
+            root.geometry("1400x1000")
+
     if dev_mode:
-        root.geometry("1400x1000")
         root.configure(bg="black")
+        _maximize()
         launch_app("dev@local", "Dev")
         root.mainloop()
         return
@@ -1469,12 +1497,13 @@ def main():
         db   = _load_accounts()
         user = db["users"].get(saved_email)
         if user and user.get("verified"):
-            root.geometry("1400x1000")
             root.configure(bg="black")
+            _maximize()
             launch_app(saved_email, user["name"])
             root.mainloop()
             return
 
+    root.geometry("420x600")
     LoginWindow(root, launch_app)
     root.mainloop()
 

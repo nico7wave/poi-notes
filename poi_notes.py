@@ -265,10 +265,6 @@ class POIApp:
         self._date_lbl.grid(row=0, column=1, sticky="ew")
         tk.Button(top, text="▶", command=lambda: self._shift_day(1),
                   **BTN).grid(row=0, column=2, padx=14, pady=4)
-        tk.Button(top, text="⚙", command=self._open_settings,
-                  font=("Helvetica", 22), relief="flat", bd=0,
-                  padx=12, cursor="hand2").grid(row=0, column=3, rowspan=2, padx=(0, 10))
-
         tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
                   **BTN).grid(row=1, column=0, padx=14, pady=4)
         self._time_lbl = tk.Label(top, font=("Helvetica", 26), anchor="center")
@@ -282,7 +278,7 @@ class POIApp:
         self.active_tab = "map"
         tab_bar = tk.Frame(root, bg="#1C1C1E", pady=0)
         tab_bar.pack(fill="x", side="bottom")
-        for c in range(3):
+        for c in range(4):
             tab_bar.columnconfigure(c, weight=1)
 
         tab_cfg = dict(bg="#1C1C1E", activebackground="#2C2C2E",
@@ -306,6 +302,12 @@ class POIApp:
             font=("Helvetica", 26), fg="#666666",
             command=self._show_inbox_tab, **tab_cfg)
         self._tab_inbox_btn.grid(row=0, column=2, sticky="ew")
+
+        self._tab_acct_btn = tk.Button(
+            tab_bar, text="👤  Account",
+            font=("Helvetica", 26), fg="#666666",
+            command=self._show_account_tab, **tab_cfg)
+        self._tab_acct_btn.grid(row=0, column=3, sticky="ew")
 
         # ── map panel ─────────────────────────────────────────────────────────
         self.map_panel = tk.Frame(root)
@@ -455,6 +457,31 @@ class POIApp:
 
         self._inbox_detail_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
 
+        # ── account panel ─────────────────────────────────────────────────────
+        self.acct_panel = tk.Frame(root, bg="#F2F2F7")
+
+        tk.Label(self.acct_panel, text="Account", bg="#F2F2F7",
+                 font=("Helvetica", 34, "bold"), fg="#1A1A1A", pady=20).pack()
+
+        info_card = tk.Frame(self.acct_panel, bg="#FFFFFF",
+                             highlightbackground="#E0E0E0", highlightthickness=1)
+        info_card.pack(fill="x", padx=40, pady=(0, 8))
+        tk.Label(info_card, text=name or "User", bg="#FFFFFF", fg="#1A1A1A",
+                 font=("Helvetica", 22, "bold"), anchor="w").pack(
+                 fill="x", padx=24, pady=(20, 4))
+        tk.Label(info_card, text=email, bg="#FFFFFF", fg="#888888",
+                 font=("Helvetica", 16), anchor="w").pack(
+                 fill="x", padx=24, pady=(0, 20))
+
+        tk.Frame(self.acct_panel, bg="#E0E0E0", height=1).pack(fill="x", padx=40, pady=(16, 0))
+
+        HoverButton(self.acct_panel, nbg="#F2F2F7", hbg="#FFE8E8",
+                    nfg="#E74C3C", hfg="#C0392B",
+                    text="Log Out", font=("Helvetica", 20, "bold"),
+                    relief="flat", bd=0, pady=18, cursor="hand2",
+                    command=lambda: self._on_logout() if self._on_logout else None
+                    ).pack(fill="x", padx=40, pady=(16, 0))
+
         self._load_profile()
         self._advance_card()
         self._show_nbr_browse()
@@ -486,50 +513,25 @@ class POIApp:
         self._tab_map_btn.config(**(active   if name == "map"       else inactive))
         self._tab_nbr_btn.config(**(active   if name == "neighbors" else inactive))
         self._tab_inbox_btn.config(**(active if name == "inbox"     else inactive))
+        self._tab_acct_btn.config(**(active  if name == "account"   else inactive))
         self.map_panel.pack_forget()
         self.nbr_panel.pack_forget()
         self.inbox_panel.pack_forget()
+        self.acct_panel.pack_forget()
         if name == "map":
             self.map_panel.pack(fill="both", expand=True)
         elif name == "neighbors":
             self.nbr_panel.pack(fill="both", expand=True)
-        else:
+        elif name == "inbox":
             self._build_inbox()
             self.inbox_panel.pack(fill="both", expand=True)
+        else:
+            self.acct_panel.pack(fill="both", expand=True)
 
     def _show_map_tab(self):       self._set_tab("map")
     def _show_neighbors_tab(self): self._set_tab("neighbors")
     def _show_inbox_tab(self):     self._set_tab("inbox")
-
-    def _open_settings(self):
-        win = tk.Toplevel(self.root)
-        win.title("Settings")
-        win.geometry("380x300")
-        win.resizable(False, False)
-        win.grab_set()
-        win.configure(bg="#FFFFFF")
-
-        tk.Label(win, text="Account", bg="#FFFFFF", fg="#1A1A1A",
-                 font=("Helvetica", 20, "bold")).pack(anchor="w", padx=32, pady=(28, 0))
-
-        card = tk.Frame(win, bg="#F8F6FB", padx=24, pady=18)
-        card.pack(fill="x", padx=32, pady=(12, 0))
-        tk.Label(card, text=self._name or "User", bg="#F8F6FB", fg="#1A1A1A",
-                 font=("Helvetica", 15, "bold")).pack(anchor="w")
-        tk.Label(card, text=self._email, bg="#F8F6FB", fg="#888888",
-                 font=("Helvetica", 12)).pack(anchor="w", pady=(3, 0))
-
-        tk.Frame(win, bg="#EEEEEE", height=1).pack(fill="x", padx=32, pady=(24, 0))
-
-        def do_logout():
-            win.destroy()
-            if self._on_logout:
-                self._on_logout()
-
-        HoverButton(win, nbg="#FFFFFF", hbg="#FFF0F0", nfg="#E74C3C", hfg="#C0392B",
-                    text="Log Out", font=("Helvetica", 14, "bold"),
-                    relief="flat", bd=0, pady=14, cursor="hand2",
-                    command=do_logout).pack(fill="x", padx=32, pady=(16, 0))
+    def _show_account_tab(self):   self._set_tab("account")
 
     # ── neighbors sub-views ───────────────────────────────────────────────────
 

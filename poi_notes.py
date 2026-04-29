@@ -72,9 +72,9 @@ def _send_code(to_email: str, code: str) -> bool:
 
 
 # ── button style constants (from map-pan: larger fonts for HiDPI) ─────────────
-BTN = dict(font=("Helvetica", 28, "bold"), relief="raised", bd=4,
+BTN = dict(font=("Segoe UI", 28, "bold"), relief="raised", bd=4,
            padx=28, pady=16, cursor="hand2")
-BTN_SM = dict(font=("Helvetica", 24, "bold"), relief="raised", bd=3,
+BTN_SM = dict(font=("Segoe UI", 24, "bold"), relief="raised", bd=3,
               padx=20, pady=12, cursor="hand2")
 
 # ── mock neighbor data (backend will replace) ─────────────────────────────────
@@ -125,15 +125,15 @@ class MediaEditor(tk.Toplevel):
         self._photos   = {}
         self._paths    = {}
 
-        tk.Label(self, text=window_title, font=("Helvetica", 26, "bold"), fg=SUB_COLOR).pack(pady=(18, 0))
-        tk.Label(self, text=subtitle,     font=("Helvetica", 20),         fg="#888888").pack(pady=(4, 10))
+        tk.Label(self, text=window_title, font=("Segoe UI", 26, "bold"), fg=SUB_COLOR).pack(pady=(18, 0))
+        tk.Label(self, text=subtitle,     font=("Segoe UI", 20),         fg="#888888").pack(pady=(4, 10))
 
         title_row = tk.Frame(self)
         title_row.pack(fill="x", padx=20, pady=(0, 10))
-        tk.Label(title_row, text="Title:", font=("Helvetica", 22, "bold"), width=6, anchor="w").pack(side="left")
+        tk.Label(title_row, text="Title:", font=("Segoe UI", 22, "bold"), width=6, anchor="w").pack(side="left")
         self._title_var = tk.StringVar(value=marker_title)
         tk.Entry(title_row, textvariable=self._title_var,
-                 font=("Helvetica", 24)).pack(side="left", fill="x", expand=True, ipady=6)
+                 font=("Segoe UI", 24)).pack(side="left", fill="x", expand=True, ipady=6)
 
         toolbar = tk.Frame(self, pady=6)
         toolbar.pack(fill="x", padx=20)
@@ -143,7 +143,7 @@ class MediaEditor(tk.Toplevel):
         frm.pack(fill="both", expand=True, padx=20, pady=8)
         sb = tk.Scrollbar(frm)
         sb.pack(side="right", fill="y")
-        self.txt = tk.Text(frm, wrap="word", font=("Helvetica", 24), yscrollcommand=sb.set)
+        self.txt = tk.Text(frm, wrap="word", font=("Segoe UI", 24), yscrollcommand=sb.set)
         self.txt.pack(fill="both", expand=True)
         sb.config(command=self.txt.yview)
 
@@ -267,25 +267,25 @@ class POIApp:
 
         self._tab_map_btn = tk.Button(
             tab_bar, text="🗺  Map",
-            font=("Helvetica", 26, "bold"), fg="white",
+            font=("Segoe UI", 26, "bold"), fg="white",
             command=self._show_map_tab, **tab_cfg)
         self._tab_map_btn.grid(row=0, column=0, sticky="ew")
 
         self._tab_nbr_btn = tk.Button(
             tab_bar, text="👥  Neighbors",
-            font=("Helvetica", 26), fg="#666666",
+            font=("Segoe UI", 26), fg="#666666",
             command=self._show_neighbors_tab, **tab_cfg)
         self._tab_nbr_btn.grid(row=0, column=1, sticky="ew")
 
         self._tab_inbox_btn = tk.Button(
             tab_bar, text="💬  Inbox",
-            font=("Helvetica", 26), fg="#666666",
+            font=("Segoe UI", 26), fg="#666666",
             command=self._show_inbox_tab, **tab_cfg)
         self._tab_inbox_btn.grid(row=0, column=2, sticky="ew")
 
         self._tab_acct_btn = tk.Button(
             tab_bar, text="👤  Account",
-            font=("Helvetica", 26), fg="#666666",
+            font=("Segoe UI", 26), fg="#666666",
             command=self._show_account_tab, **tab_cfg)
         self._tab_acct_btn.grid(row=0, column=3, sticky="ew")
 
@@ -299,7 +299,7 @@ class POIApp:
         map_hdr.pack(fill="x", side="top")
 
         tk.Label(map_hdr, text="meow", bg="#FFFFFF", fg="#27AE60",
-                 font=("Helvetica", 20, "bold"), padx=18).pack(side="left", pady=14)
+                 font=("Segoe UI", 20, "bold"), padx=18).pack(side="left", pady=14)
 
         ctrl = tk.Frame(map_hdr, bg="#FFFFFF")
         ctrl.pack(side="right", padx=16, pady=10)
@@ -308,25 +308,25 @@ class POIApp:
         dpill.pack(side="left", padx=(0, 8))
         tk.Button(dpill, text="◀", command=lambda: self._shift_day(-1),
                   bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
-                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+                  font=("Segoe UI", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
         self._date_lbl = tk.Label(dpill, text="", bg="#E9F7EF", fg="#145A32",
-                                  font=("Helvetica", 13, "bold"), width=11, anchor="center")
+                                  font=("Segoe UI", 13, "bold"), width=11, anchor="center")
         self._date_lbl.pack(side="left")
         tk.Button(dpill, text="▶", command=lambda: self._shift_day(1),
                   bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
-                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+                  font=("Segoe UI", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
 
         tpill = tk.Frame(ctrl, bg="#E9F7EF")
         tpill.pack(side="left")
         tk.Button(tpill, text="◀", command=lambda: self._shift_hour(-1),
                   bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
-                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+                  font=("Segoe UI", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
         self._time_lbl = tk.Label(tpill, text="", bg="#E9F7EF", fg="#145A32",
-                                  font=("Helvetica", 13, "bold"), width=6, anchor="center")
+                                  font=("Segoe UI", 13, "bold"), width=6, anchor="center")
         self._time_lbl.pack(side="left")
         tk.Button(tpill, text="▶", command=lambda: self._shift_hour(1),
                   bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
-                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+                  font=("Segoe UI", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
 
         self._update_time_display()
 
@@ -334,7 +334,7 @@ class POIApp:
         self.bar.pack(fill="x", side="bottom")
         self.add_btn = tk.Button(self.bar, text="+ Marker", command=self._add_sub_poi,
                                  bg="#27AE60", fg="white", **BTN)
-        self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Helvetica", 22))
+        self.info_lbl = tk.Label(self.bar, anchor="w", padx=8, font=("Segoe UI", 22))
 
         self.canvas = tk.Canvas(self.map_panel, bg="white")
         self.canvas.pack(fill="both", expand=True)
@@ -360,7 +360,7 @@ class POIApp:
         self._profile_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._profile_view, text="My Profile", bg="#F2F2F7",
-                 font=("Helvetica", 34, "bold"), pady=14).pack()
+                 font=("Segoe UI", 34, "bold"), pady=14).pack()
 
         form = tk.Frame(self._profile_view, bg="#F2F2F7")
         form.pack(padx=40, fill="x")
@@ -368,37 +368,37 @@ class POIApp:
         insta_hdr = tk.Frame(form, bg="#F2F2F7")
         insta_hdr.pack(fill="x", pady=(0, 6))
         tk.Label(insta_hdr, text="Instagram", bg="#F2F2F7",
-                 font=("Helvetica", 24, "bold")).pack(side="left")
+                 font=("Segoe UI", 24, "bold")).pack(side="left")
         self._pub_insta_var = tk.BooleanVar(value=True)
         tk.Checkbutton(insta_hdr, text="Show publicly on my card",
                        variable=self._pub_insta_var, bg="#F2F2F7",
-                       font=("Helvetica", 20), fg="#555555").pack(side="left", padx=14)
+                       font=("Segoe UI", 20), fg="#555555").pack(side="left", padx=14)
 
         insta_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         insta_row.pack(fill="x")
         tk.Label(insta_row, text="@", bg="white",
-                 font=("Helvetica", 28, "bold"), fg="#C13584", padx=12).pack(side="left")
+                 font=("Segoe UI", 28, "bold"), fg="#C13584", padx=12).pack(side="left")
         self._insta_var = tk.StringVar()
         tk.Entry(insta_row, textvariable=self._insta_var,
-                 font=("Helvetica", 26), relief="flat", bg="white").pack(
+                 font=("Segoe UI", 26), relief="flat", bg="white").pack(
                  side="left", fill="x", expand=True, ipady=12)
 
         dorm_hdr = tk.Frame(form, bg="#F2F2F7")
         dorm_hdr.pack(fill="x", pady=(18, 6))
         tk.Label(dorm_hdr, text="Dorm / Building", bg="#F2F2F7",
-                 font=("Helvetica", 24, "bold")).pack(side="left")
+                 font=("Segoe UI", 24, "bold")).pack(side="left")
         self._pub_dorm_var = tk.BooleanVar(value=True)
         tk.Checkbutton(dorm_hdr, text="Show publicly on my card",
                        variable=self._pub_dorm_var, bg="#F2F2F7",
-                       font=("Helvetica", 20), fg="#555555").pack(side="left", padx=14)
+                       font=("Segoe UI", 20), fg="#555555").pack(side="left", padx=14)
 
         dorm_row = tk.Frame(form, bg="white", relief="solid", bd=1)
         dorm_row.pack(fill="x")
         tk.Label(dorm_row, text="🏠", bg="white",
-                 font=("Helvetica", 28), padx=12).pack(side="left")
+                 font=("Segoe UI", 28), padx=12).pack(side="left")
         self._dorm_var = tk.StringVar()
         tk.Entry(dorm_row, textvariable=self._dorm_var,
-                 font=("Helvetica", 26), relief="flat", bg="white").pack(
+                 font=("Segoe UI", 26), relief="flat", bg="white").pack(
                  side="left", fill="x", expand=True, ipady=12)
 
         disc_row = tk.Frame(form, bg="#F2F2F7")
@@ -407,10 +407,10 @@ class POIApp:
         tk.Checkbutton(disc_row,
                        text="Only show my profile to people I've already liked",
                        variable=self._only_likers_var, bg="#F2F2F7",
-                       font=("Helvetica", 20), fg="#555555",
+                       font=("Segoe UI", 20), fg="#555555",
                        wraplength=600, justify="left").pack(anchor="w")
         tk.Label(form, text="If checked, you won't appear to others unless you liked them first.",
-                 bg="#F2F2F7", fg="#AAAAAA", font=("Helvetica", 18),
+                 bg="#F2F2F7", fg="#AAAAAA", font=("Segoe UI", 18),
                  wraplength=600, justify="left").pack(anchor="w", pady=(4, 0))
 
         tk.Button(self._profile_view, text="Save Profile",
@@ -418,17 +418,17 @@ class POIApp:
                   **BTN).pack(pady=22)
 
         self._insta_status = tk.Label(self._profile_view, text="", bg="#F2F2F7",
-                                      font=("Helvetica", 22), fg="#27AE60")
+                                      font=("Segoe UI", 22), fg="#27AE60")
         self._insta_status.pack()
 
         # ── browse sub-view ───────────────────────────────────────────────────
         self._browse_view = tk.Frame(self.nbr_panel, bg="#F2F2F7")
 
         tk.Label(self._browse_view, text="Neighbors Near You", bg="#F2F2F7",
-                 font=("Helvetica", 34, "bold"), pady=14).pack()
+                 font=("Segoe UI", 34, "bold"), pady=14).pack()
         tk.Label(self._browse_view,
                  text="Your like or pass is completely private until you both match.",
-                 bg="#F2F2F7", fg="#666666", font=("Helvetica", 20)).pack(pady=(0, 16))
+                 bg="#F2F2F7", fg="#666666", font=("Segoe UI", 20)).pack(pady=(0, 16))
 
         self._match_idx    = 0
         self._match_data   = {}
@@ -439,15 +439,15 @@ class POIApp:
         self._card.pack()
 
         self._card_gram = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 40, "bold"), fg="#C13584")
+                                   font=("Segoe UI", 40, "bold"), fg="#C13584")
         self._card_gram.pack(pady=(0, 12))
 
         self._card_dorm = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 26), fg="#444444")
+                                   font=("Segoe UI", 26), fg="#444444")
         self._card_dorm.pack()
 
         self._card_note = tk.Label(self._card, text="", bg="white",
-                                   font=("Helvetica", 20, "italic"), fg="#AAAAAA")
+                                   font=("Segoe UI", 20, "italic"), fg="#AAAAAA")
         self._card_note.pack(pady=(10, 0))
 
         swipe_row = tk.Frame(self._browse_view, bg="#F2F2F7")
@@ -467,7 +467,7 @@ class POIApp:
         self.inbox_panel = tk.Frame(root, bg="#F2F2F7")
 
         tk.Label(self.inbox_panel, text="Inbox", bg="#F2F2F7",
-                 font=("Helvetica", 36, "bold"), pady=20).pack()
+                 font=("Segoe UI", 36, "bold"), pady=20).pack()
 
         self._inbox_list_frame = tk.Frame(self.inbox_panel, bg="#F2F2F7")
         self._inbox_list_frame.pack(fill="both", expand=True, padx=24)
@@ -478,23 +478,23 @@ class POIApp:
         self.acct_panel = tk.Frame(root, bg="#F2F2F7")
 
         tk.Label(self.acct_panel, text="Account", bg="#F2F2F7",
-                 font=("Helvetica", 34, "bold"), fg="#1A1A1A", pady=20).pack()
+                 font=("Segoe UI", 34, "bold"), fg="#1A1A1A", pady=20).pack()
 
         info_card = tk.Frame(self.acct_panel, bg="#FFFFFF",
                              highlightbackground="#E0E0E0", highlightthickness=1)
         info_card.pack(fill="x", padx=40, pady=(0, 8))
         tk.Label(info_card, text=name or "User", bg="#FFFFFF", fg="#1A1A1A",
-                 font=("Helvetica", 22, "bold"), anchor="w").pack(
+                 font=("Segoe UI", 22, "bold"), anchor="w").pack(
                  fill="x", padx=24, pady=(20, 4))
         tk.Label(info_card, text=email, bg="#FFFFFF", fg="#888888",
-                 font=("Helvetica", 16), anchor="w").pack(
+                 font=("Segoe UI", 16), anchor="w").pack(
                  fill="x", padx=24, pady=(0, 20))
 
         tk.Frame(self.acct_panel, bg="#E0E0E0", height=1).pack(fill="x", padx=40, pady=(16, 0))
 
         HoverButton(self.acct_panel, nbg="#F2F2F7", hbg="#FFE8E8",
                     nfg="#E74C3C", hfg="#C0392B",
-                    text="Log Out", font=("Helvetica", 20, "bold"),
+                    text="Log Out", font=("Segoe UI", 20, "bold"),
                     relief="flat", bd=0, pady=18, cursor="hand2",
                     command=lambda: self._on_logout() if self._on_logout else None
                     ).pack(fill="x", padx=40, pady=(16, 0))
@@ -525,8 +525,8 @@ class POIApp:
 
     def _set_tab(self, name):
         self.active_tab = name
-        inactive = dict(font=("Helvetica", 26), fg="#666666")
-        active   = dict(font=("Helvetica", 26, "bold"), fg="white")
+        inactive = dict(font=("Segoe UI", 26), fg="#666666")
+        active   = dict(font=("Segoe UI", 26, "bold"), fg="white")
         self._tab_map_btn.config(**(active   if name == "map"       else inactive))
         self._tab_nbr_btn.config(**(active   if name == "neighbors" else inactive))
         self._tab_inbox_btn.config(**(active if name == "inbox"     else inactive))
@@ -634,19 +634,19 @@ class POIApp:
             self._card_dorm.config(text=nb["dorm"])
             self._card_note.config(
                 text="It's a match!  Check your Inbox ✉",
-                fg="#C13584", font=("Helvetica", 22, "bold"))
+                fg="#C13584", font=("Segoe UI", 22, "bold"))
             self._pass_btn.config(state="disabled")
             self._like_btn.config(text="Next  →", bg="#2980B9",
                                   command=self._next_after_match, state="normal")
             self._tab_inbox_btn.config(text="💬  Inbox ●", fg="#F39C12",
-                                       font=("Helvetica", 26, "bold"))
+                                       font=("Segoe UI", 26, "bold"))
         else:
             self._match_data[str(idx)] = "liked"
             self._persist_match_data()
             self._advance_card()
 
     def _next_after_match(self):
-        self._card_note.config(fg="#AAAAAA", font=("Helvetica", 20, "italic"))
+        self._card_note.config(fg="#AAAAAA", font=("Segoe UI", 20, "italic"))
         self._advance_card()
 
     def _persist_match_data(self):
@@ -671,7 +671,7 @@ class POIApp:
             tk.Label(self._inbox_list_frame,
                      text="No matches yet.\nGo browse some neighbors!",
                      bg="#F2F2F7", fg="#888888",
-                     font=("Helvetica", 26), justify="center").pack(pady=60)
+                     font=("Segoe UI", 26), justify="center").pack(pady=60)
             return
 
         for idx, _ in matches:
@@ -680,11 +680,11 @@ class POIApp:
                            relief="ridge", bd=2, padx=20, pady=16)
             row.pack(fill="x", pady=8)
             tk.Label(row, text=f"@{nb['instagram']}", bg="white",
-                     font=("Helvetica", 28, "bold"), fg="#C13584").pack(anchor="w")
+                     font=("Segoe UI", 28, "bold"), fg="#C13584").pack(anchor="w")
             tk.Label(row, text=nb["dorm"], bg="white",
-                     font=("Helvetica", 22), fg="#555555").pack(anchor="w")
+                     font=("Segoe UI", 22), fg="#555555").pack(anchor="w")
             tk.Label(row, text="Matched!", bg="white",
-                     font=("Helvetica", 20, "italic"), fg="#27AE60").pack(anchor="w")
+                     font=("Segoe UI", 20, "italic"), fg="#27AE60").pack(anchor="w")
             tk.Button(row, text="View Profile →",
                       bg="#27AE60", fg="white",
                       command=lambda n=nb: self._open_match_detail(n),
@@ -700,11 +700,11 @@ class POIApp:
                   command=self._close_match_detail,
                   bg="#CCCCCC", fg="#333333", **BTN_SM).pack(anchor="w", pady=(0, 20))
         tk.Label(self._inbox_detail_frame, text=f"@{nb['instagram']}",
-                 bg="#F2F2F7", font=("Helvetica", 42, "bold"), fg="#C13584").pack()
+                 bg="#F2F2F7", font=("Segoe UI", 42, "bold"), fg="#C13584").pack()
         tk.Label(self._inbox_detail_frame, text=nb["dorm"],
-                 bg="#F2F2F7", font=("Helvetica", 28), fg="#444444").pack(pady=(10, 0))
+                 bg="#F2F2F7", font=("Segoe UI", 28), fg="#444444").pack(pady=(10, 0))
         tk.Label(self._inbox_detail_frame, text="Matched with you",
-                 bg="#F2F2F7", font=("Helvetica", 22, "italic"), fg="#27AE60").pack(pady=(6, 28))
+                 bg="#F2F2F7", font=("Segoe UI", 22, "italic"), fg="#27AE60").pack(pady=(6, 28))
         tk.Button(self._inbox_detail_frame, text="💬  Chat",
                   bg="#2980B9", fg="white",
                   command=lambda: self._open_chat(nb),
@@ -721,15 +721,15 @@ class POIApp:
         win.grab_set()
 
         tk.Label(win, text=f"@{nb['instagram']}",
-                 font=("Helvetica", 28, "bold"), fg="#C13584").pack(pady=(18, 0))
+                 font=("Segoe UI", 28, "bold"), fg="#C13584").pack(pady=(18, 0))
         tk.Label(win, text=nb["dorm"],
-                 font=("Helvetica", 20), fg="#888888").pack(pady=(4, 12))
+                 font=("Segoe UI", 20), fg="#888888").pack(pady=(4, 12))
 
         frm = tk.Frame(win)
         frm.pack(fill="both", expand=True, padx=14, pady=4)
         sb = tk.Scrollbar(frm)
         sb.pack(side="right", fill="y")
-        chat_log = tk.Text(frm, wrap="word", font=("Helvetica", 22),
+        chat_log = tk.Text(frm, wrap="word", font=("Segoe UI", 22),
                            state="disabled", yscrollcommand=sb.set, bg="#F9F9F9")
         chat_log.pack(fill="both", expand=True)
         sb.config(command=chat_log.yview)
@@ -738,7 +738,7 @@ class POIApp:
         entry_row.pack(fill="x", padx=14, pady=(0, 14))
         msg_var = tk.StringVar()
         entry = tk.Entry(entry_row, textvariable=msg_var,
-                         font=("Helvetica", 24), relief="solid", bd=1)
+                         font=("Segoe UI", 24), relief="solid", bd=1)
         entry.pack(side="left", fill="x", expand=True, ipady=10, padx=(0, 10))
 
         def send(_=None):
@@ -906,7 +906,7 @@ class POIApp:
             self.canvas.create_rectangle(x1, y1, x2, y2, outline=color, width=3, fill=""),
             self.canvas.create_text(
                 (x1 + x2) / 2, (y1 + y2) / 2,
-                text=str(i + 1), font=("Helvetica", 22, "bold"), fill=color,
+                text=str(i + 1), font=("Segoe UI", 22, "bold"), fill=color,
             ),
         ]
         for corner in range(4):
@@ -938,7 +938,7 @@ class POIApp:
         if title and self._zoom >= ZOOM_LABEL_THRESHOLD:
             txt_id = self.canvas.create_text(
                 x, y - SUB_RADIUS - 7, text=title,
-                font=("Helvetica", 16, "bold"), fill="white", anchor="s",
+                font=("Segoe UI", 16, "bold"), fill="white", anchor="s",
             )
             bbox = self.canvas.bbox(txt_id)
             if bbox:
@@ -959,7 +959,7 @@ class POIApp:
         ))
         ids.append(self.canvas.create_text(
             x, y, text=str(sub_idx + 1),
-            font=("Helvetica", 18, "bold"),
+            font=("Segoe UI", 18, "bold"),
             fill="white" if has_note else SUB_COLOR,
         ))
         self._sub_items[key] = ids
@@ -1187,12 +1187,12 @@ class LoginWindow:
 
     def _field(self, parent, label, show="", on_return=None):
         tk.Label(parent, text=label, bg=self.BG, fg="#999999",
-                 font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(16, 2))
+                 font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", pady=(16, 2))
         border = tk.Frame(parent, bg="#DEDEDE", padx=1, pady=1)
         border.pack(fill="x")
         var = tk.StringVar()
         e = tk.Entry(border, textvariable=var, show=show,
-                     font=("Helvetica", 15), relief="flat",
+                     font=("Segoe UI", 15), relief="flat",
                      bg=self.FIELD_BG, insertbackground=self.PURPLE)
         e.pack(fill="x", ipady=11, padx=2, pady=1)
         e.bind("<FocusIn>",  lambda _: border.config(bg=self.PURPLE))
@@ -1203,20 +1203,20 @@ class LoginWindow:
 
     def _primary_btn(self, parent, text, command, pady_top=20):
         HoverButton(parent, nbg=self.PURPLE, hbg=self.PURPLE_D,
-                    text=text, font=("Helvetica", 14, "bold"),
+                    text=text, font=("Segoe UI", 14, "bold"),
                     relief="flat", pady=13, cursor="hand2",
                     command=command).pack(fill="x", pady=(pady_top, 0))
 
     def _outline_btn(self, parent, text, command, pady_top=12):
         HoverButton(parent, nbg=self.BG, hbg="#D5F5E3",
                     nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text=text, font=("Helvetica", 13, "bold"),
+                    text=text, font=("Segoe UI", 13, "bold"),
                     relief="solid", bd=1, pady=11, cursor="hand2",
                     command=command).pack(fill="x", pady=(pady_top, 0))
 
     def _err_lbl(self, parent):
         lbl = tk.Label(parent, text="", bg=self.BG, fg=self.ERR,
-                       font=("Helvetica", 11), wraplength=320, justify="center")
+                       font=("Segoe UI", 11), wraplength=320, justify="center")
         lbl.pack(pady=(10, 0))
         return lbl
 
@@ -1227,9 +1227,9 @@ class LoginWindow:
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
         tk.Label(hdr, text="meow", bg=self.HEADER, fg="white",
-                 font=("Helvetica", 58, "bold")).pack(expand=True, pady=(36, 0))
+                 font=("Segoe UI", 58, "bold")).pack(expand=True, pady=(36, 0))
         tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#A9DFBF",
-                 font=("Helvetica", 13)).pack(pady=(2, 32))
+                 font=("Segoe UI", 13)).pack(pady=(2, 32))
 
         body = tk.Frame(f, bg=self.BG, padx=44)
         body.pack(fill="both", expand=True)
@@ -1245,7 +1245,7 @@ class LoginWindow:
         div.pack_propagate(False)
         tk.Frame(div, bg="#EEEEEE", height=1).pack(side="left", fill="x", expand=True, pady=14)
         tk.Label(div, text="  or  ", bg=self.BG, fg="#CCCCCC",
-                 font=("Helvetica", 11)).pack(side="left")
+                 font=("Segoe UI", 11)).pack(side="left")
         tk.Frame(div, bg="#EEEEEE", height=1).pack(side="left", fill="x", expand=True, pady=14)
 
         self._outline_btn(body, "Create Account", lambda: self._show("register"), pady_top=0)
@@ -1258,13 +1258,13 @@ class LoginWindow:
         nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
+                    text="← Back", font=("Segoe UI", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("login")).pack(side="left")
 
         tk.Label(f, text="Create Account", bg=self.BG, fg="#1A1A1A",
-                 font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(12, 0))
+                 font=("Segoe UI", 24, "bold")).pack(anchor="w", pady=(12, 0))
         tk.Label(f, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
-                 font=("Helvetica", 12)).pack(anchor="w", pady=(2, 0))
+                 font=("Segoe UI", 12)).pack(anchor="w", pady=(2, 0))
 
         self._reg_name_var  = self._field(f, "FULL NAME")
         self._reg_email_var = self._field(f, "EMAIL")
@@ -1282,22 +1282,22 @@ class LoginWindow:
         nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
         HoverButton(nav, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
+                    text="← Back", font=("Segoe UI", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("register")).pack(side="left")
 
         tk.Label(f, text="Check your email", bg=self.BG, fg="#1A1A1A",
-                 font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(24, 0))
+                 font=("Segoe UI", 24, "bold")).pack(anchor="w", pady=(24, 0))
         self._verify_sub = tk.Label(f, text="", bg=self.BG, fg="#888888",
-                                    font=("Helvetica", 12), wraplength=320, justify="left")
+                                    font=("Segoe UI", 12), wraplength=320, justify="left")
         self._verify_sub.pack(anchor="w", pady=(4, 0))
 
         tk.Label(f, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
-                 font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(28, 2))
+                 font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", pady=(28, 2))
         code_border = tk.Frame(f, bg="#DEDEDE", padx=1, pady=1)
         code_border.pack(fill="x")
         self._verify_code_var = tk.StringVar()
         code_e = tk.Entry(code_border, textvariable=self._verify_code_var,
-                          font=("Helvetica", 28, "bold"), width=8,
+                          font=("Segoe UI", 28, "bold"), width=8,
                           justify="center", relief="flat",
                           bg=self.FIELD_BG, insertbackground=self.PURPLE)
         code_e.pack(ipady=12, padx=2, pady=1)
@@ -1311,7 +1311,7 @@ class LoginWindow:
         row = tk.Frame(f, bg=self.BG)
         row.pack(pady=(16, 0))
         HoverButton(row, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text="Resend code", font=("Helvetica", 12), relief="flat", bd=0,
+                    text="Resend code", font=("Segoe UI", 12), relief="flat", bd=0,
                     cursor="hand2", command=self._resend_code).pack(side="left")
         return f
 

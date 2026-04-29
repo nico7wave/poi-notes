@@ -102,7 +102,7 @@ CORNER_KEYS = [
     ("rx1", "ry2"), ("rx2", "ry2"),
 ]
 
-SUB_COLOR            = "#8E44AD"
+SUB_COLOR            = "#27AE60"
 SUB_RADIUS           = 14
 DEFAULT_SUB          = [(0.25, 0.25), (0.75, 0.25), (0.25, 0.75), (0.75, 0.75)]
 MAX_IMG_WIDTH        = 400
@@ -298,34 +298,34 @@ class POIApp:
                            highlightbackground="#E8E8E8", highlightthickness=1)
         map_hdr.pack(fill="x", side="top")
 
-        tk.Label(map_hdr, text="meow", bg="#FFFFFF", fg="#8E44AD",
+        tk.Label(map_hdr, text="meow", bg="#FFFFFF", fg="#27AE60",
                  font=("Helvetica", 20, "bold"), padx=18).pack(side="left", pady=14)
 
         ctrl = tk.Frame(map_hdr, bg="#FFFFFF")
         ctrl.pack(side="right", padx=16, pady=10)
 
-        dpill = tk.Frame(ctrl, bg="#F3EBF9")
+        dpill = tk.Frame(ctrl, bg="#E9F7EF")
         dpill.pack(side="left", padx=(0, 8))
         tk.Button(dpill, text="◀", command=lambda: self._shift_day(-1),
-                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
                   font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
-        self._date_lbl = tk.Label(dpill, text="", bg="#F3EBF9", fg="#3B1054",
+        self._date_lbl = tk.Label(dpill, text="", bg="#E9F7EF", fg="#145A32",
                                   font=("Helvetica", 13, "bold"), width=11, anchor="center")
         self._date_lbl.pack(side="left")
         tk.Button(dpill, text="▶", command=lambda: self._shift_day(1),
-                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
                   font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
 
-        tpill = tk.Frame(ctrl, bg="#F3EBF9")
+        tpill = tk.Frame(ctrl, bg="#E9F7EF")
         tpill.pack(side="left")
         tk.Button(tpill, text="◀", command=lambda: self._shift_hour(-1),
-                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
                   font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
-        self._time_lbl = tk.Label(tpill, text="", bg="#F3EBF9", fg="#3B1054",
+        self._time_lbl = tk.Label(tpill, text="", bg="#E9F7EF", fg="#145A32",
                                   font=("Helvetica", 13, "bold"), width=6, anchor="center")
         self._time_lbl.pack(side="left")
         tk.Button(tpill, text="▶", command=lambda: self._shift_hour(1),
-                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  bg="#E9F7EF", fg="#1E8449", relief="flat", bd=0,
                   font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
 
         self._update_time_display()
@@ -347,7 +347,7 @@ class POIApp:
         self._nbr_view = "browse"
 
         self._nbr_profile_btn = tk.Button(
-            nbr_nav, text="My Profile", bg="#8E44AD", fg="white",
+            nbr_nav, text="My Profile", bg="#27AE60", fg="white",
             command=self._show_nbr_profile, **BTN_SM)
         self._nbr_profile_btn.pack(side="left", padx=(0, 14))
 
@@ -555,13 +555,13 @@ class POIApp:
     def _show_nbr_profile(self):
         self._browse_view.pack_forget()
         self._profile_view.pack(fill="both", expand=True)
-        self._nbr_profile_btn.config(bg="#8E44AD", fg="white")
+        self._nbr_profile_btn.config(bg="#27AE60", fg="white")
         self._nbr_browse_btn.config(bg="#CCCCCC", fg="#333333")
 
     def _show_nbr_browse(self):
         self._profile_view.pack_forget()
         self._browse_view.pack(fill="both", expand=True)
-        self._nbr_browse_btn.config(bg="#8E44AD", fg="white")
+        self._nbr_browse_btn.config(bg="#27AE60", fg="white")
         self._nbr_profile_btn.config(bg="#CCCCCC", fg="#333333")
 
     # ── profile save / load ───────────────────────────────────────────────────
@@ -686,7 +686,7 @@ class POIApp:
             tk.Label(row, text="Matched!", bg="white",
                      font=("Helvetica", 20, "italic"), fg="#27AE60").pack(anchor="w")
             tk.Button(row, text="View Profile →",
-                      bg="#8E44AD", fg="white",
+                      bg="#27AE60", fg="white",
                       command=lambda n=nb: self._open_match_detail(n),
                       **BTN_SM).pack(anchor="e", pady=(8, 0))
 
@@ -1156,11 +1156,11 @@ class HoverButton(tk.Button):
 
 
 class LoginWindow:
-    HEADER   = "#2D0A4E"
-    PURPLE   = "#8E44AD"
-    PURPLE_D = "#6C3483"
+    HEADER   = "#145A32"
+    PURPLE   = "#27AE60"
+    PURPLE_D = "#1E8449"
     BG       = "#FFFFFF"
-    FIELD_BG = "#F8F6FB"
+    FIELD_BG = "#F0FAF4"
     ERR      = "#E74C3C"
 
     def __init__(self, root: tk.Tk, on_success):
@@ -1208,7 +1208,7 @@ class LoginWindow:
                     command=command).pack(fill="x", pady=(pady_top, 0))
 
     def _outline_btn(self, parent, text, command, pady_top=12):
-        HoverButton(parent, nbg=self.BG, hbg="#F3E8FF",
+        HoverButton(parent, nbg=self.BG, hbg="#D5F5E3",
                     nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text=text, font=("Helvetica", 13, "bold"),
                     relief="solid", bd=1, pady=11, cursor="hand2",
@@ -1228,7 +1228,7 @@ class LoginWindow:
         hdr.pack_propagate(False)
         tk.Label(hdr, text="meow", bg=self.HEADER, fg="white",
                  font=("Helvetica", 58, "bold")).pack(expand=True, pady=(36, 0))
-        tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#B89FD0",
+        tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#A9DFBF",
                  font=("Helvetica", 13)).pack(pady=(2, 32))
 
         body = tk.Frame(f, bg=self.BG, padx=44)
@@ -1257,7 +1257,7 @@ class LoginWindow:
 
         nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
-        HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+        HoverButton(nav, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("login")).pack(side="left")
 
@@ -1281,7 +1281,7 @@ class LoginWindow:
 
         nav = tk.Frame(f, bg=self.BG)
         nav.pack(fill="x", pady=(20, 0))
-        HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+        HoverButton(nav, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=lambda: self._show("register")).pack(side="left")
 
@@ -1310,7 +1310,7 @@ class LoginWindow:
 
         row = tk.Frame(f, bg=self.BG)
         row.pack(pady=(16, 0))
-        HoverButton(row, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+        HoverButton(row, nbg=self.BG, hbg="#D5F5E3", nfg=self.PURPLE, hfg=self.PURPLE_D,
                     text="Resend code", font=("Helvetica", 12), relief="flat", bd=0,
                     cursor="hand2", command=self._resend_code).pack(side="left")
         return f

@@ -222,11 +222,14 @@ class MediaEditor(tk.Toplevel):
 
 
 class POIApp:
-    def __init__(self, root, image_path):
-        self.root       = root
-        self.image_path = image_path
-        self.data_path  = os.path.splitext(image_path)[0] + "_poi.json"
-        self.media_dir  = os.path.splitext(image_path)[0] + "_poi_media"
+    def __init__(self, root, image_path, email="", name="", on_logout=None):
+        self.root        = root
+        self.image_path  = image_path
+        self.data_path   = os.path.splitext(image_path)[0] + "_poi.json"
+        self.media_dir   = os.path.splitext(image_path)[0] + "_poi_media"
+        self._email      = email
+        self._name       = name
+        self._on_logout  = on_logout
 
         root.title("meow")
         root.geometry("1400x1000")
@@ -262,6 +265,9 @@ class POIApp:
         self._date_lbl.grid(row=0, column=1, sticky="ew")
         tk.Button(top, text="▶", command=lambda: self._shift_day(1),
                   **BTN).grid(row=0, column=2, padx=14, pady=4)
+        tk.Button(top, text="⚙", command=self._open_settings,
+                  font=("Helvetica", 22), relief="flat", bd=0,
+                  padx=12, cursor="hand2").grid(row=0, column=3, rowspan=2, padx=(0, 10))
 
         tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
                   **BTN).grid(row=1, column=0, padx=14, pady=4)
@@ -494,6 +500,36 @@ class POIApp:
     def _show_map_tab(self):       self._set_tab("map")
     def _show_neighbors_tab(self): self._set_tab("neighbors")
     def _show_inbox_tab(self):     self._set_tab("inbox")
+
+    def _open_settings(self):
+        win = tk.Toplevel(self.root)
+        win.title("Settings")
+        win.geometry("380x300")
+        win.resizable(False, False)
+        win.grab_set()
+        win.configure(bg="#FFFFFF")
+
+        tk.Label(win, text="Account", bg="#FFFFFF", fg="#1A1A1A",
+                 font=("Helvetica", 20, "bold")).pack(anchor="w", padx=32, pady=(28, 0))
+
+        card = tk.Frame(win, bg="#F8F6FB", padx=24, pady=18)
+        card.pack(fill="x", padx=32, pady=(12, 0))
+        tk.Label(card, text=self._name or "User", bg="#F8F6FB", fg="#1A1A1A",
+                 font=("Helvetica", 15, "bold")).pack(anchor="w")
+        tk.Label(card, text=self._email, bg="#F8F6FB", fg="#888888",
+                 font=("Helvetica", 12)).pack(anchor="w", pady=(3, 0))
+
+        tk.Frame(win, bg="#EEEEEE", height=1).pack(fill="x", padx=32, pady=(24, 0))
+
+        def do_logout():
+            win.destroy()
+            if self._on_logout:
+                self._on_logout()
+
+        HoverButton(win, nbg="#FFFFFF", hbg="#FFF0F0", nfg="#E74C3C", hfg="#C0392B",
+                    text="Log Out", font=("Helvetica", 14, "bold"),
+                    relief="flat", bd=0, pady=14, cursor="hand2",
+                    command=do_logout).pack(fill="x", padx=32, pady=(16, 0))
 
     # ── neighbors sub-views ───────────────────────────────────────────────────
 
@@ -1101,11 +1137,12 @@ class HoverButton(tk.Button):
 
 
 class LoginWindow:
+    HEADER   = "#2D0A4E"
     PURPLE   = "#8E44AD"
     PURPLE_D = "#6C3483"
-    BG       = "#EDE7F6"
-    CARD     = "#FFFFFF"
-    BORDER   = "#C9B8DE"
+    BG       = "#FFFFFF"
+    FIELD_BG = "#F8F6FB"
+    ERR      = "#E74C3C"
 
     def __init__(self, root: tk.Tk, on_success):
         self.root       = root
@@ -1115,7 +1152,7 @@ class LoginWindow:
         self._reg_email = None
 
         root.title("meow")
-        root.geometry("460x560")
+        root.geometry("420x600")
         root.resizable(False, False)
         root.configure(bg=self.BG)
 
@@ -1130,156 +1167,130 @@ class LoginWindow:
         {"login": self._f_login, "register": self._f_register,
          "verify": self._f_verify}[which].place(relx=0, rely=0, relwidth=1, relheight=1)
 
-    def _card(self, parent):
-        tk.Frame(parent, bg=self.BG).pack(expand=True, fill="both")
-        card = tk.Frame(parent, bg=self.CARD,
-                        highlightbackground=self.BORDER, highlightthickness=1)
-        card.pack(fill="x", padx=50)
-        tk.Frame(parent, bg=self.BG).pack(expand=True, fill="both")
-        return card
-
-    def _field(self, card, label, show=""):
-        tk.Label(card, text=label, bg=self.CARD, anchor="w",
-                 font=("Helvetica", 10, "bold"), fg="#999999").pack(
-                 fill="x", padx=32, pady=(14, 2))
-        border = tk.Frame(card, bg="#DDDDDD", padx=1, pady=1)
-        border.pack(fill="x", padx=32)
+    def _field(self, parent, label, show=""):
+        tk.Label(parent, text=label, bg=self.BG, fg="#999999",
+                 font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(16, 2))
+        border = tk.Frame(parent, bg="#DEDEDE", padx=1, pady=1)
+        border.pack(fill="x")
         var = tk.StringVar()
         e = tk.Entry(border, textvariable=var, show=show,
-                     font=("Helvetica", 14), relief="flat", bg="white", bd=0)
-        e.pack(fill="x", ipady=8, padx=2, pady=1)
+                     font=("Helvetica", 15), relief="flat",
+                     bg=self.FIELD_BG, insertbackground=self.PURPLE)
+        e.pack(fill="x", ipady=11, padx=2, pady=1)
         e.bind("<FocusIn>",  lambda _: border.config(bg=self.PURPLE))
-        e.bind("<FocusOut>", lambda _: border.config(bg="#DDDDDD"))
+        e.bind("<FocusOut>", lambda _: border.config(bg="#DEDEDE"))
         return var
 
-    def _divider(self, card):
-        tk.Frame(card, bg="#EDE7F6", height=1).pack(fill="x", padx=32, pady=(16, 0))
+    def _primary_btn(self, parent, text, command, pady_top=20):
+        HoverButton(parent, nbg=self.PURPLE, hbg=self.PURPLE_D,
+                    text=text, font=("Helvetica", 14, "bold"),
+                    relief="flat", pady=13, cursor="hand2",
+                    command=command).pack(fill="x", pady=(pady_top, 0))
 
-    def _err(self, label, msg):
-        label.config(text=msg)
+    def _outline_btn(self, parent, text, command, pady_top=12):
+        HoverButton(parent, nbg=self.BG, hbg="#F3E8FF",
+                    nfg=self.PURPLE, hfg=self.PURPLE_D,
+                    text=text, font=("Helvetica", 13, "bold"),
+                    relief="solid", bd=1, pady=11, cursor="hand2",
+                    command=command).pack(fill="x", pady=(pady_top, 0))
+
+    def _err_lbl(self, parent):
+        lbl = tk.Label(parent, text="", bg=self.BG, fg=self.ERR,
+                       font=("Helvetica", 11), wraplength=320, justify="center")
+        lbl.pack(pady=(10, 0))
+        return lbl
 
     def _build_login(self):
         f = tk.Frame(self.root, bg=self.BG)
-        card = self._card(f)
 
-        tk.Label(card, text="meow", bg=self.CARD,
-                 font=("Helvetica", 44, "bold"), fg=self.PURPLE).pack(pady=(36, 2))
-        tk.Label(card, text="campus map · TCNJ", bg=self.CARD,
-                 font=("Helvetica", 12), fg="#BBBBBB").pack()
-        self._divider(card)
+        hdr = tk.Frame(f, bg=self.HEADER, height=200)
+        hdr.pack(fill="x")
+        hdr.pack_propagate(False)
+        tk.Label(hdr, text="meow", bg=self.HEADER, fg="white",
+                 font=("Helvetica", 58, "bold")).pack(expand=True, pady=(36, 0))
+        tk.Label(hdr, text="campus map · TCNJ", bg=self.HEADER, fg="#B89FD0",
+                 font=("Helvetica", 13)).pack(pady=(2, 32))
 
-        self._login_email = self._field(card, "Email")
-        self._login_pw    = self._field(card, "Password", show="•")
+        body = tk.Frame(f, bg=self.BG, padx=44)
+        body.pack(fill="both", expand=True)
 
-        self._login_err = tk.Label(card, text="", bg=self.CARD,
-                                   font=("Helvetica", 11), fg="#E74C3C")
-        self._login_err.pack(pady=(6, 0))
+        self._login_email = self._field(body, "EMAIL")
+        self._login_pw    = self._field(body, "PASSWORD", show="•")
+        self._login_err   = self._err_lbl(body)
 
-        HoverButton(card, nbg=self.PURPLE, hbg=self.PURPLE_D,
-                    text="Log In",
-                    font=("Helvetica", 14, "bold"), relief="flat", bd=0,
-                    pady=12, cursor="hand2",
-                    command=self._do_login).pack(fill="x", padx=32, pady=(12, 0))
+        self._primary_btn(body, "Log In", self._do_login)
 
-        sep = tk.Frame(card, bg=self.CARD, height=20)
-        sep.pack(fill="x", padx=32, pady=16)
-        sep.pack_propagate(False)
-        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x", expand=True, pady=9)
-        tk.Label(sep, text="  or  ", bg=self.CARD, fg="#CCCCCC",
-                 font=("Helvetica", 10)).pack(side="left")
-        tk.Frame(sep, bg="#E8DAEF", height=1).pack(side="left", fill="x", expand=True, pady=9)
+        div = tk.Frame(body, bg=self.BG, height=30)
+        div.pack(fill="x", pady=(20, 0))
+        div.pack_propagate(False)
+        tk.Frame(div, bg="#EEEEEE", height=1).pack(side="left", fill="x", expand=True, pady=14)
+        tk.Label(div, text="  or  ", bg=self.BG, fg="#CCCCCC",
+                 font=("Helvetica", 11)).pack(side="left")
+        tk.Frame(div, bg="#EEEEEE", height=1).pack(side="left", fill="x", expand=True, pady=14)
 
-        HoverButton(card, nbg=self.CARD, hbg="#F3E8FF",
-                    nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text="Create Account",
-                    font=("Helvetica", 13, "bold"), relief="solid", bd=1,
-                    pady=10, cursor="hand2",
-                    command=lambda: self._show("register")).pack(
-                    fill="x", padx=32, pady=(0, 36))
+        self._outline_btn(body, "Create Account", lambda: self._show("register"), pady_top=0)
+
         return f
 
     def _build_register(self):
-        f = tk.Frame(self.root, bg=self.BG)
-        card = self._card(f)
+        f = tk.Frame(self.root, bg=self.BG, padx=44)
 
-        tk.Label(card, text="Create Account", bg=self.CARD,
-                 font=("Helvetica", 26, "bold"), fg=self.PURPLE).pack(pady=(32, 2))
-        tk.Label(card, text="Use your TCNJ email to get started", bg=self.CARD,
-                 font=("Helvetica", 11), fg="#BBBBBB").pack()
-        self._divider(card)
+        nav = tk.Frame(f, bg=self.BG)
+        nav.pack(fill="x", pady=(20, 0))
+        HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+                    text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
+                    cursor="hand2", command=lambda: self._show("login")).pack(side="left")
 
-        self._reg_name_var  = self._field(card, "Full name")
-        self._reg_email_var = self._field(card, "Email")
-        self._reg_pw_var    = self._field(card, "Password (min 8 chars)", show="•")
-        self._reg_pw2_var   = self._field(card, "Confirm password", show="•")
+        tk.Label(f, text="Create Account", bg=self.BG, fg="#1A1A1A",
+                 font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(12, 0))
+        tk.Label(f, text="Use your TCNJ email to get started", bg=self.BG, fg="#AAAAAA",
+                 font=("Helvetica", 12)).pack(anchor="w", pady=(2, 0))
 
-        self._reg_err = tk.Label(card, text="", bg=self.CARD,
-                                 font=("Helvetica", 11), fg="#E74C3C",
-                                 wraplength=300, justify="center")
-        self._reg_err.pack(pady=(6, 0))
+        self._reg_name_var  = self._field(f, "FULL NAME")
+        self._reg_email_var = self._field(f, "EMAIL")
+        self._reg_pw_var    = self._field(f, "PASSWORD  (min 8 chars)", show="•")
+        self._reg_pw2_var   = self._field(f, "CONFIRM PASSWORD", show="•")
+        self._reg_err       = self._err_lbl(f)
 
-        HoverButton(card, nbg=self.PURPLE, hbg=self.PURPLE_D,
-                    text="Send Verification Code",
-                    font=("Helvetica", 13, "bold"), relief="flat", bd=0,
-                    pady=11, cursor="hand2",
-                    command=self._do_register).pack(fill="x", padx=32, pady=(10, 0))
-
-        HoverButton(card, nbg=self.CARD, hbg="#F3E8FF",
-                    nfg="#AAAAAA", hfg=self.PURPLE,
-                    text="← Back to login",
-                    font=("Helvetica", 11), relief="flat", bd=0,
-                    pady=8, cursor="hand2",
-                    command=lambda: self._show("login")).pack(pady=(8, 28))
+        self._primary_btn(f, "Send Verification Code", self._do_register)
         return f
 
     def _build_verify(self):
-        f = tk.Frame(self.root, bg=self.BG)
-        card = self._card(f)
+        f = tk.Frame(self.root, bg=self.BG, padx=44)
 
-        tk.Label(card, text="Check your email", bg=self.CARD,
-                 font=("Helvetica", 24, "bold"), fg=self.PURPLE).pack(pady=(36, 6))
-        self._verify_sub = tk.Label(card, text="", bg=self.CARD,
-                                    font=("Helvetica", 11), fg="#666666",
-                                    wraplength=280, justify="center")
-        self._verify_sub.pack()
-        self._divider(card)
+        nav = tk.Frame(f, bg=self.BG)
+        nav.pack(fill="x", pady=(20, 0))
+        HoverButton(nav, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+                    text="← Back", font=("Helvetica", 12), relief="flat", bd=0,
+                    cursor="hand2", command=lambda: self._show("register")).pack(side="left")
 
-        tk.Label(card, text="6-digit code", bg=self.CARD,
-                 font=("Helvetica", 10, "bold"), fg="#999999").pack(pady=(14, 0))
+        tk.Label(f, text="Check your email", bg=self.BG, fg="#1A1A1A",
+                 font=("Helvetica", 24, "bold")).pack(anchor="w", pady=(24, 0))
+        self._verify_sub = tk.Label(f, text="", bg=self.BG, fg="#888888",
+                                    font=("Helvetica", 12), wraplength=320, justify="left")
+        self._verify_sub.pack(anchor="w", pady=(4, 0))
 
-        code_border = tk.Frame(card, bg="#DDDDDD", padx=1, pady=1)
-        code_border.pack(pady=8)
+        tk.Label(f, text="6-DIGIT CODE", bg=self.BG, fg="#999999",
+                 font=("Helvetica", 10, "bold"), anchor="w").pack(fill="x", pady=(28, 2))
+        code_border = tk.Frame(f, bg="#DEDEDE", padx=1, pady=1)
+        code_border.pack(fill="x")
         self._verify_code_var = tk.StringVar()
         code_e = tk.Entry(code_border, textvariable=self._verify_code_var,
-                          font=("Helvetica", 30, "bold"), width=7,
-                          justify="center", relief="flat", bg="white", bd=0)
-        code_e.pack(ipady=10, padx=2, pady=1)
+                          font=("Helvetica", 28, "bold"), width=8,
+                          justify="center", relief="flat",
+                          bg=self.FIELD_BG, insertbackground=self.PURPLE)
+        code_e.pack(ipady=12, padx=2, pady=1)
         code_e.bind("<FocusIn>",  lambda _: code_border.config(bg=self.PURPLE))
-        code_e.bind("<FocusOut>", lambda _: code_border.config(bg="#DDDDDD"))
+        code_e.bind("<FocusOut>", lambda _: code_border.config(bg="#DEDEDE"))
 
-        self._verify_err = tk.Label(card, text="", bg=self.CARD,
-                                    font=("Helvetica", 11), fg="#E74C3C")
-        self._verify_err.pack(pady=(4, 0))
+        self._verify_err = self._err_lbl(f)
+        self._primary_btn(f, "Verify & Create Account", self._do_verify)
 
-        HoverButton(card, nbg=self.PURPLE, hbg=self.PURPLE_D,
-                    text="Verify & Create Account",
-                    font=("Helvetica", 13, "bold"), relief="flat", bd=0,
-                    pady=11, cursor="hand2",
-                    command=self._do_verify).pack(fill="x", padx=32, pady=(10, 0))
-
-        row = tk.Frame(card, bg=self.CARD)
-        row.pack(pady=(14, 28))
-        HoverButton(row, nbg=self.CARD, hbg="#F3E8FF",
-                    nfg=self.PURPLE, hfg=self.PURPLE_D,
-                    text="Resend code",
-                    font=("Helvetica", 11), relief="flat", bd=0,
-                    cursor="hand2", command=self._resend_code).pack(side="left", padx=12)
-        HoverButton(row, nbg=self.CARD, hbg="#F3E8FF",
-                    nfg="#AAAAAA", hfg=self.PURPLE,
-                    text="← Back",
-                    font=("Helvetica", 11), relief="flat", bd=0,
-                    cursor="hand2",
-                    command=lambda: self._show("register")).pack(side="left", padx=12)
+        row = tk.Frame(f, bg=self.BG)
+        row.pack(pady=(16, 0))
+        HoverButton(row, nbg=self.BG, hbg="#F3E8FF", nfg=self.PURPLE, hfg=self.PURPLE_D,
+                    text="Resend code", font=("Helvetica", 12), relief="flat", bd=0,
+                    cursor="hand2", command=self._resend_code).pack(side="left")
         return f
 
     def _do_login(self):
@@ -1288,18 +1299,18 @@ class LoginWindow:
         self._login_err.config(text="")
 
         if not email or not pw:
-            self._err(self._login_err, "Please fill in all fields.")
+            self._login_err.config(text="Please fill in all fields.")
             return
         db   = _load_accounts()
         user = db["users"].get(email)
         if not user:
-            self._err(self._login_err, "No account found for that email.")
+            self._login_err.config(text="No account found for that email.")
             return
         if not user.get("verified"):
-            self._err(self._login_err, "Email not verified. Create your account again.")
+            self._login_err.config(text="Email not verified. Create your account again.")
             return
         if _hash_pw(pw, user["salt"]) != user["password_hash"]:
-            self._err(self._login_err, "Incorrect password.")
+            self._login_err.config(text="Incorrect password.")
             return
         _save_session(email)
         self._launch(email, user["name"])
@@ -1312,20 +1323,20 @@ class LoginWindow:
         self._reg_err.config(text="")
 
         if not all([name, email, pw, pw2]):
-            self._err(self._reg_err, "Please fill in all fields.")
+            self._reg_err.config(text="Please fill in all fields.")
             return
         if len(pw) < 8:
-            self._err(self._reg_err, "Password must be at least 8 characters.")
+            self._reg_err.config(text="Password must be at least 8 characters.")
             return
         if pw != pw2:
-            self._err(self._reg_err, "Passwords don't match.")
+            self._reg_err.config(text="Passwords don't match.")
             return
         if "@" not in email or "." not in email.split("@")[-1]:
-            self._err(self._reg_err, "Please enter a valid email address.")
+            self._reg_err.config(text="Please enter a valid email address.")
             return
         db = _load_accounts()
         if email in db["users"] and db["users"][email].get("verified"):
-            self._err(self._reg_err, "An account with that email already exists.")
+            self._reg_err.config(text="An account with that email already exists.")
             return
 
         salt = uuid.uuid4().hex
@@ -1344,10 +1355,10 @@ class LoginWindow:
 
         sent = _send_code(email, self._code)
         if sent:
-            self._verify_sub.config(text=f"We sent a code to {email}")
+            self._verify_sub.config(text=f"We sent a 6-digit code to {email}")
         else:
             self._verify_sub.config(
-                text=f"SMTP not set up — your code is: {self._code}\n(shown for development)"
+                text=f"SMTP not configured — your code is: {self._code}"
             )
         self._verify_code_var.set("")
         self._verify_err.config(text="")
@@ -1358,14 +1369,14 @@ class LoginWindow:
         self._verify_err.config(text="")
 
         if not self._code:
-            self._err(self._verify_err, "No code pending. Go back and try again.")
+            self._verify_err.config(text="No code pending. Go back and try again.")
             return
         age = (datetime.datetime.now() - self._code_ts).total_seconds()
         if age > 600:
-            self._err(self._verify_err, "Code expired. Please resend.")
+            self._verify_err.config(text="Code expired. Please resend.")
             return
         if entered != self._code:
-            self._err(self._verify_err, "Incorrect code.")
+            self._verify_err.config(text="Incorrect code.")
             return
 
         db = _load_accounts()
@@ -1384,7 +1395,7 @@ class LoginWindow:
         if sent:
             self._verify_sub.config(text=f"New code sent to {self._reg_email}")
         else:
-            self._verify_sub.config(text=f"SMTP not set up — new code: {self._code}")
+            self._verify_sub.config(text=f"SMTP not configured — new code: {self._code}")
         self._verify_err.config(text="")
 
     def _launch(self, email, name):
@@ -1414,8 +1425,17 @@ def main():
         root.destroy()
         return
 
+    def do_logout():
+        _clear_session()
+        for w in root.winfo_children():
+            w.destroy()
+        root.geometry("420x600")
+        root.resizable(False, False)
+        root.configure(bg="#FFFFFF")
+        LoginWindow(root, launch_app)
+
     def launch_app(email, name):
-        POIApp(root, IMAGE_PATH)
+        POIApp(root, IMAGE_PATH, email=email, name=name, on_logout=do_logout)
         root.title(f"meow  —  {name}")
 
     if dev_mode:

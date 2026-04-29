@@ -254,26 +254,6 @@ class POIApp:
         self.sel_date = now.date()
         self.sel_hour = now.hour
 
-        # ── top bar ───────────────────────────────────────────────────────────
-        top = tk.Frame(root, relief="raised", bd=1, pady=10)
-        top.pack(fill="x", side="top")
-        top.columnconfigure(1, weight=1)
-
-        tk.Button(top, text="◀", command=lambda: self._shift_day(-1),
-                  **BTN).grid(row=0, column=0, padx=14, pady=4)
-        self._date_lbl = tk.Label(top, font=("Helvetica", 28, "bold"), anchor="center")
-        self._date_lbl.grid(row=0, column=1, sticky="ew")
-        tk.Button(top, text="▶", command=lambda: self._shift_day(1),
-                  **BTN).grid(row=0, column=2, padx=14, pady=4)
-        tk.Button(top, text="◀", command=lambda: self._shift_hour(-1),
-                  **BTN).grid(row=1, column=0, padx=14, pady=4)
-        self._time_lbl = tk.Label(top, font=("Helvetica", 26), anchor="center")
-        self._time_lbl.grid(row=1, column=1, sticky="ew")
-        tk.Button(top, text="▶", command=lambda: self._shift_hour(1),
-                  **BTN).grid(row=1, column=2, padx=14, pady=4)
-
-        self._update_time_display()
-
         # ── bottom tab bar ────────────────────────────────────────────────────
         self.active_tab = "map"
         tab_bar = tk.Frame(root, bg="#1C1C1E", pady=0)
@@ -312,6 +292,43 @@ class POIApp:
         # ── map panel ─────────────────────────────────────────────────────────
         self.map_panel = tk.Frame(root)
         self.map_panel.pack(fill="both", expand=True)
+
+        # compact map header
+        map_hdr = tk.Frame(self.map_panel, bg="#FFFFFF",
+                           highlightbackground="#E8E8E8", highlightthickness=1)
+        map_hdr.pack(fill="x", side="top")
+
+        tk.Label(map_hdr, text="meow", bg="#FFFFFF", fg="#8E44AD",
+                 font=("Helvetica", 20, "bold"), padx=18).pack(side="left", pady=14)
+
+        ctrl = tk.Frame(map_hdr, bg="#FFFFFF")
+        ctrl.pack(side="right", padx=16, pady=10)
+
+        dpill = tk.Frame(ctrl, bg="#F3EBF9")
+        dpill.pack(side="left", padx=(0, 8))
+        tk.Button(dpill, text="◀", command=lambda: self._shift_day(-1),
+                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+        self._date_lbl = tk.Label(dpill, text="", bg="#F3EBF9", fg="#3B1054",
+                                  font=("Helvetica", 13, "bold"), width=11, anchor="center")
+        self._date_lbl.pack(side="left")
+        tk.Button(dpill, text="▶", command=lambda: self._shift_day(1),
+                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+
+        tpill = tk.Frame(ctrl, bg="#F3EBF9")
+        tpill.pack(side="left")
+        tk.Button(tpill, text="◀", command=lambda: self._shift_hour(-1),
+                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+        self._time_lbl = tk.Label(tpill, text="", bg="#F3EBF9", fg="#3B1054",
+                                  font=("Helvetica", 13, "bold"), width=6, anchor="center")
+        self._time_lbl.pack(side="left")
+        tk.Button(tpill, text="▶", command=lambda: self._shift_hour(1),
+                  bg="#F3EBF9", fg="#6C3483", relief="flat", bd=0,
+                  font=("Helvetica", 13), padx=8, cursor="hand2").pack(side="left", ipady=6)
+
+        self._update_time_display()
 
         self.bar     = tk.Frame(self.map_panel, relief="sunken", bd=1, pady=4)
         self.bar.pack(fill="x", side="bottom")
@@ -764,9 +781,9 @@ class POIApp:
             self._redraw_sub_pois()
 
     def _update_time_display(self):
-        self._date_lbl.config(text=self.sel_date.strftime("%A,  %B %d  %Y"))
+        self._date_lbl.config(text=self.sel_date.strftime("%b %d, %Y"))
         h = self.sel_hour
-        self._time_lbl.config(text=f"{h % 12 or 12}:00 {'AM' if h < 12 else 'PM'}")
+        self._time_lbl.config(text=f"{h % 12 or 12} {'AM' if h < 12 else 'PM'}")
 
     def selected_datetime(self):
         return datetime.datetime.combine(self.sel_date, datetime.time(self.sel_hour))
